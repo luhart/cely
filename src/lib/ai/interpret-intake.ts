@@ -55,6 +55,7 @@ Confidence may be medium only when the clinical meaning is adequately clear; oth
       {
         task: `Interpret ${request.preferredLanguage} patient intake into English while preserving a same-language restatement for confirmation.`,
         preferredLanguage: request.preferredLanguage,
+        languageCode: request.languageCode,
         chiefComplaint: request.chiefComplaint,
         clarificationQuestion: request.clarificationQuestion,
         clarificationResponse: request.clarificationResponse,

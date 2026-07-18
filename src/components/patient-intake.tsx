@@ -20,11 +20,17 @@ import {
   type IntakeInterpretation,
   type UrgentIntake,
 } from "@/lib/workflow/contracts";
+import {
+  detectIntakeLanguage,
+  resolveLanguageOverride,
+  type DetectedIntakeLanguage,
+} from "@/lib/workflow/language";
+import { languageExperience } from "@/lib/workflow/language-profiles";
 import { evaluateIntakeSafety, type IntakeSafetyDecision } from "@/lib/workflow/policy";
 
 export type { ConfirmedIntake, UrgentIntake } from "@/lib/workflow/contracts";
 
-type IntakeStage = "language" | "complaint" | "clarification" | "confirmation" | "confirmed" | "urgent";
+type IntakeStage = "complaint" | "language" | "clarification" | "confirmation" | "confirmed" | "urgent";
 type PreferredLanguage = ConfirmedIntake["preferredLanguage"];
 type InterpretationStatus = "idle" | "loading" | "ready" | "error";
 type GeneratedInterpretation = IntakeInterpretation & { model: string };
@@ -44,7 +50,7 @@ type AlternateDemo = {
 };
 
 type IntakeScript = {
-  code: "tl" | "es";
+  code: string;
   nativeLabel: string;
   englishLabel: string;
   complaintPrompt: string;
@@ -83,7 +89,7 @@ type IntakeScript = {
   };
 };
 
-const scripts: Record<PreferredLanguage, IntakeScript> = {
+const scripts: Record<string, IntakeScript> = {
   Tagalog: {
     code: "tl",
     nativeLabel: "Tagalog",
@@ -224,7 +230,49 @@ const scripts: Record<PreferredLanguage, IntakeScript> = {
   },
 };
 
-const stageLabels = ["Language", "Symptoms", "Clarify", "Confirm"] as const;
+function genericScript(languageName: string, languageCode: string): IntakeScript {
+  const experience = languageExperience(languageName);
+  return {
+    code: languageCode,
+    nativeLabel: languageName,
+    englishLabel: languageName,
+    complaintPrompt: "Tell us what you want to make sure is addressed during your visit.",
+    complaintPromptEnglish: "Tell us what you want to make sure is addressed during your visit.",
+    complaintLabel: "Describe it in your own words",
+    complaintLabelEnglish: "Describe it in your own words",
+    complaintPlaceholder: "Write naturally in your own language…",
+    demoComplaint: "",
+    clarificationQuestion: experience.clarificationQuestion,
+    clarificationQuestionEnglish: "Can you add one detail about when this started or what it feels like?",
+    clarificationLabel: "Add one clarifying detail",
+    clarificationLabelEnglish: "Add one clarifying detail",
+    clarificationPlaceholder: "Respond in your own language…",
+    demoClarification: "",
+    confirmationHeading: experience.confirmationHeading,
+    confirmationLead: "",
+    demoPatientInterpretation: "",
+    demoEnglishInterpretation: "",
+    demoVisitTopics: [],
+    confirmLabel: experience.confirmLabel,
+    controls: {
+      changeLanguage: experience.changeLanguage,
+      useDemo: "Use demo",
+      continue: "Continue",
+      reviewMeaning: "Review meaning",
+      editAnswers: "Edit answers",
+      back: "Back",
+      meaningHeading: "One detail needs clarification",
+      meaningDetail: "We preserve uncertain wording instead of guessing.",
+      lowConfidence: "Needs clarification",
+      priorityHeading: experience.priorityHeading,
+      priorityHelp: "Choose your top priority. The care team may move another concern earlier for safety.",
+      noPreference: experience.noPreference,
+      confirmed: "Meaning and priority confirmed · ready for the care team",
+    },
+  };
+}
+
+const stageLabels = ["Symptoms", "Language", "Clarify", "Confirm"] as const;
 
 function normalize(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -232,13 +280,13 @@ function normalize(value: string): string {
 
 function urgentGuidance(language: PreferredLanguage, ruleId: IntakeSafetyDecision["ruleId"]): string {
   if (ruleId === "self-harm") {
-    return language === "Tagalog"
-      ? "Kailangan mo ng agarang suporta mula sa isang tao. Kung may agarang panganib, tumawag sa lokal na serbisyong pang-emergency ngayon; sa U.S., tumawag o mag-text sa 988."
-      : "Necesita apoyo humano inmediato. Si hay peligro inmediato, llame ahora a los servicios de emergencia locales; en EE. UU., llame o envíe un mensaje de texto al 988.";
+    if (language === "Tagalog") return "Kailangan mo ng agarang suporta mula sa isang tao. Kung may agarang panganib, tumawag sa lokal na serbisyong pang-emergency ngayon; sa U.S., tumawag o mag-text sa 988.";
+    if (language === "Spanish") return "Necesita apoyo humano inmediato. Si hay peligro inmediato, llame ahora a los servicios de emergencia locales; en EE. UU., llame o envíe un mensaje de texto al 988.";
+    return "This needs immediate human support. If there is immediate danger, call local emergency services now; in the U.S., call or text 988.";
   }
-  return language === "Tagalog"
-    ? "Maaaring emergency ito. Tumawag sa lokal na serbisyong pang-emergency ngayon at huwag hintayin ang appointment."
-    : "Esto puede ser una emergencia. Llame ahora a los servicios de emergencia locales y no espere a la cita.";
+  if (language === "Tagalog") return "Maaaring emergency ito. Tumawag sa lokal na serbisyong pang-emergency ngayon at huwag hintayin ang appointment.";
+  if (language === "Spanish") return "Esto puede ser una emergencia. Llame ahora a los servicios de emergencia locales y no espere a la cita.";
+  return "This may be an emergency. Call local emergency services now and do not wait for the appointment.";
 }
 
 function confidenceLabel(language: PreferredLanguage, confidence: "low" | "medium" | "high"): string {
@@ -247,9 +295,14 @@ function confidenceLabel(language: PreferredLanguage, confidence: "low" | "mediu
     if (confidence === "medium") return "Katamtamang kumpiyansa";
     return "Mababang kumpiyansa";
   }
-  if (confidence === "high") return "Alta confianza";
-  if (confidence === "medium") return "Confianza media";
-  return "Baja confianza";
+  if (language === "Spanish") {
+    if (confidence === "high") return "Alta confianza";
+    if (confidence === "medium") return "Confianza media";
+    return "Baja confianza";
+  }
+  if (confidence === "high") return "High confidence";
+  if (confidence === "medium") return "Medium confidence";
+  return "Low confidence";
 }
 
 function IntakeMessage({
@@ -265,7 +318,7 @@ function IntakeMessage({
   patientInitials: string;
   text: string;
   translated?: string;
-  languageCode: "tl" | "es";
+  languageCode: string;
 }) {
   return (
     <div className={`message-row ${speaker} is-visible`}>
@@ -274,7 +327,7 @@ function IntakeMessage({
       </div>
       <div className="message-bubble">
         <div className="message-speaker">{speaker === "behemoth" ? "Behemoth" : patientName}</div>
-        <p lang={languageCode}>{text}</p>
+        <p lang={languageCode} dir="auto">{text}</p>
         {translated ? (
           <div className="translation" lang="en">
             <Languages size={12} aria-hidden="true" /> {translated}
@@ -304,8 +357,13 @@ export function PatientIntake({
   const confirmedRef = useRef(false);
   const interpretationRequestRef = useRef(0);
   const interpretationAbortRef = useRef<AbortController | null>(null);
-  const [stage, setStage] = useState<IntakeStage>("language");
+  const [stage, setStage] = useState<IntakeStage>("complaint");
   const [preferredLanguage, setPreferredLanguage] = useState<PreferredLanguage | null>(null);
+  const [languageCode, setLanguageCode] = useState<string | null>(null);
+  const [languageProvenance, setLanguageProvenance] = useState<"detected" | "manual" | null>(null);
+  const [languageCandidate, setLanguageCandidate] = useState<DetectedIntakeLanguage | null>(null);
+  const [manualLanguage, setManualLanguage] = useState("");
+  const [languageError, setLanguageError] = useState<string | null>(null);
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [clarificationResponse, setClarificationResponse] = useState("");
   const [safetyDecision, setSafetyDecision] = useState<IntakeSafetyDecision | null>(null);
@@ -314,9 +372,11 @@ export function PatientIntake({
   const [interpretationError, setInterpretationError] = useState<string | null>(null);
   const [topConcernChoice, setTopConcernChoice] = useState<number | "none" | null>(null);
 
-  const script = preferredLanguage ? scripts[preferredLanguage] : null;
+  const script = useMemo(() => preferredLanguage && languageCode
+    ? scripts[preferredLanguage] ?? genericScript(preferredLanguage, languageCode)
+    : null, [languageCode, preferredLanguage]);
   const stageIndex = stage === "confirmed" ? stageLabels.length : stage === "urgent" ? 1 : stageLabels.indexOf(
-    stage === "language" ? "Language" : stage === "complaint" ? "Symptoms" : stage === "clarification" ? "Clarify" : "Confirm",
+    stage === "complaint" ? "Symptoms" : stage === "language" ? "Language" : stage === "clarification" ? "Clarify" : "Confirm",
   );
 
   const demoForComplaint = useMemo(() => {
@@ -353,7 +413,9 @@ export function PatientIntake({
     const normalizedComplaint = normalize(chiefComplaint);
     const matchesKnownNuance = preferredLanguage === "Tagalog"
       ? normalizedComplaint.includes("kumikirot")
-      : /\b(mareo|mareada|medicina|pastilla|presi[oó]n)\b/i.test(chiefComplaint);
+      : preferredLanguage === "Spanish"
+        ? /\b(mareo|mareada|medicina|pastilla|presi[oó]n)\b/i.test(chiefComplaint)
+        : false;
     if (matchesKnownNuance) {
       return {
         question: script.clarificationQuestion,
@@ -367,10 +429,16 @@ export function PatientIntake({
           questionEnglish: "Can you describe in different words where it is and what it feels like?",
           placeholder: "Ilarawan ang lugar at pakiramdam sa ibang salita…",
         }
-      : {
+      : preferredLanguage === "Spanish"
+        ? {
           question: "¿Puede describir con otras palabras dónde lo siente y cómo se siente?",
           questionEnglish: "Can you describe in different words where it is and what it feels like?",
           placeholder: "Describa el lugar y la sensación con otras palabras…",
+        }
+        : {
+          question: script.clarificationQuestion,
+          questionEnglish: script.clarificationQuestionEnglish,
+          placeholder: script.clarificationPlaceholder,
         };
   }, [chiefComplaint, demoForComplaint, preferredLanguage, script]);
 
@@ -414,60 +482,120 @@ export function PatientIntake({
     setTopConcernChoice(null);
   };
 
-  const chooseLanguage = (language: PreferredLanguage) => {
+  const applyLanguage = (language: DetectedIntakeLanguage, provenance: "detected" | "manual") => {
     confirmedRef.current = false;
     resetGeneratedInterpretation();
-    setPreferredLanguage(language);
-    setChiefComplaint("");
+    setPreferredLanguage(language.languageName);
+    setLanguageCode(language.languageCode);
+    setLanguageProvenance(provenance);
+    setLanguageCandidate(null);
+    setManualLanguage(language.languageName);
+    setLanguageError(null);
     setClarificationResponse("");
     setSafetyDecision(null);
-    setStage("complaint");
+    setStage("clarification");
   };
 
   const changeLanguage = () => {
     confirmedRef.current = false;
     resetGeneratedInterpretation();
-    setPreferredLanguage(null);
-    setChiefComplaint("");
+    setLanguageCandidate(preferredLanguage ? resolveLanguageOverride(preferredLanguage) : null);
+    setManualLanguage(preferredLanguage ?? "");
+    setLanguageError(null);
     setClarificationResponse("");
     setSafetyDecision(null);
     setStage("language");
   };
 
-  const sendUrgentIntake = (safety: IntakeSafetyDecision | null, urgentClarification?: string) => {
-    if (disabled || !preferredLanguage || !safety?.ruleId) return;
+  const editFirstMessage = () => {
+    confirmedRef.current = false;
+    resetGeneratedInterpretation();
+    setPreferredLanguage(null);
+    setLanguageCode(null);
+    setLanguageProvenance(null);
+    setLanguageCandidate(null);
+    setManualLanguage("");
+    setLanguageError(null);
+    setClarificationResponse("");
+    setSafetyDecision(null);
+    setStage("complaint");
+  };
+
+  const sendUrgentIntake = (input: {
+    safety: IntakeSafetyDecision;
+    languageName: string;
+    code: string;
+    provenance: "detected" | "manual";
+    urgentClarification?: string;
+    englishSafetyTranslation?: string;
+  }) => {
+    if (disabled || !input.safety.ruleId) return;
     onUrgent({
-      preferredLanguage,
+      preferredLanguage: input.languageName,
+      languageCode: input.code,
+      languageProvenance: input.provenance,
       chiefComplaint: chiefComplaint.trim(),
-      clarificationResponse: urgentClarification?.trim() || undefined,
-      safetyRuleId: safety.ruleId,
+      clarificationResponse: input.urgentClarification?.trim() || undefined,
+      englishSafetyTranslation: input.englishSafetyTranslation?.trim() || undefined,
+      safetyRuleId: input.safety.ruleId,
       guidanceDisplayed: true,
     });
   };
 
   const submitComplaint = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (disabled || chiefComplaint.trim().length < 3 || !preferredLanguage) return;
+    if (disabled || chiefComplaint.trim().length < 3) return;
     const safety = evaluateIntakeSafety(chiefComplaint);
+    const detection = detectIntakeLanguage(chiefComplaint);
     if (safety.branch === "escalated" && safety.ruleId) {
+      const languageName = detection.status === "detected" ? detection.languageName : "Undetermined";
+      const code = detection.status === "detected" ? detection.languageCode : "und";
       confirmedRef.current = true;
+      setPreferredLanguage(languageName);
+      setLanguageCode(code);
+      setLanguageProvenance("detected");
       setSafetyDecision(safety);
       setStage("urgent");
-      sendUrgentIntake(safety);
+      sendUrgentIntake({ safety, languageName, code, provenance: "detected" });
       return;
     }
-    setStage("clarification");
+    if (detection.status === "detected" && detection.confidence === "high") {
+      applyLanguage(detection, "detected");
+      return;
+    }
+    setLanguageCandidate(detection.status === "detected" ? detection : null);
+    setManualLanguage(detection.status === "detected" ? detection.languageName : "");
+    setLanguageError(detection.status === "detected"
+      ? "Please confirm the detected language before we continue."
+      : "We could not identify the language confidently. Enter the language without retyping the message.");
+    setStage("language");
+  };
+
+  const submitManualLanguage = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const language = resolveLanguageOverride(manualLanguage);
+    if (!language) {
+      setLanguageError("Enter a common language name, such as French, Arabic, Hindi, Vietnamese, or Japanese.");
+      return;
+    }
+    applyLanguage(language, "manual");
   };
 
   const submitClarification = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (disabled || interpretationStatus === "loading" || clarificationResponse.trim().length < 2 || !preferredLanguage || !clarification) return;
+    if (disabled || interpretationStatus === "loading" || clarificationResponse.trim().length < 2 || !preferredLanguage || !languageCode || !clarification) return;
     const safety = evaluateIntakeSafety(`${chiefComplaint} ${clarificationResponse}`);
     if (safety.branch === "escalated" && safety.ruleId) {
       confirmedRef.current = true;
       setSafetyDecision(safety);
       setStage("urgent");
-      sendUrgentIntake(safety, clarificationResponse);
+      sendUrgentIntake({
+        safety,
+        languageName: preferredLanguage,
+        code: languageCode,
+        provenance: languageProvenance ?? "detected",
+        urgentClarification: clarificationResponse,
+      });
       return;
     }
     if (isDemoResponse) {
@@ -492,6 +620,7 @@ export function PatientIntake({
         signal: controller.signal,
         body: JSON.stringify({
           preferredLanguage,
+          languageCode,
           chiefComplaint: chiefComplaint.trim(),
           clarificationQuestion: clarification.question,
           clarificationResponse: clarificationResponse.trim(),
@@ -502,6 +631,7 @@ export function PatientIntake({
         model?: string;
         error?: string;
         safety?: IntakeSafetyDecision;
+        englishSafetyTranslation?: string;
       };
       if (requestId !== interpretationRequestRef.current) return;
       if (response.status === 409 && payload.safety?.branch === "escalated" && payload.safety.ruleId) {
@@ -509,7 +639,14 @@ export function PatientIntake({
         setSafetyDecision(payload.safety);
         setInterpretationStatus("idle");
         setStage("urgent");
-        sendUrgentIntake(payload.safety, clarificationResponse);
+        sendUrgentIntake({
+          safety: payload.safety,
+          languageName: preferredLanguage,
+          code: languageCode,
+          provenance: languageProvenance ?? "detected",
+          urgentClarification: clarificationResponse,
+          englishSafetyTranslation: payload.englishSafetyTranslation,
+        });
         return;
       }
       if (!response.ok) throw new Error(payload.error ?? "Interpretation failed.");
@@ -526,18 +663,22 @@ export function PatientIntake({
       setInterpretationStatus("error");
       setInterpretationError(preferredLanguage === "Tagalog"
         ? "Hindi makagawa ng ligtas na English interpretation ngayon. Pakisubukang muli o humingi ng kwalipikadong interpreter."
-        : "No se pudo generar una interpretación segura en inglés. Inténtelo de nuevo o solicite un intérprete calificado.");
+        : preferredLanguage === "Spanish"
+          ? "No se pudo generar una interpretación segura en inglés. Inténtelo de nuevo o solicite un intérprete calificado."
+          : "A safe English interpretation is not available right now. Please retry or use a qualified interpreter.");
     } finally {
       if (requestId === interpretationRequestRef.current) interpretationAbortRef.current = null;
     }
   };
 
   const confirmInterpretation = () => {
-    if (disabled || confirmedRef.current || !preferredLanguage || !script || !interpretation || !clarification || topConcernChoice === null) return;
+    if (disabled || confirmedRef.current || !preferredLanguage || !languageCode || !script || !interpretation || !clarification || topConcernChoice === null) return;
     confirmedRef.current = true;
     setStage("confirmed");
     onConfirmed({
       preferredLanguage,
+      languageCode,
+      languageProvenance: languageProvenance ?? "detected",
       chiefComplaint: chiefComplaint.trim(),
       clarificationQuestion: clarification.question,
       clarificationResponse: clarificationResponse.trim(),
@@ -575,109 +716,117 @@ export function PatientIntake({
             </div>
           );
         })}
-        {preferredLanguage && stage !== "confirmed" && stage !== "urgent" ? (
+        {preferredLanguage && stage !== "complaint" && stage !== "language" && stage !== "confirmed" && stage !== "urgent" ? (
           <button className="intake-language-reset" type="button" onClick={changeLanguage} disabled={disabled || interpretationStatus === "loading"}>
-            {script?.controls.changeLanguage ?? "Change language"}
+            {preferredLanguage} {languageProvenance === "manual" ? "selected" : "detected"} · {script?.controls.changeLanguage ?? "Change language"}
           </button>
         ) : null}
       </div>
 
       <div className="patient-intake-content" aria-live="polite">
-        {stage === "language" ? (
+        {stage === "complaint" ? (
           <div className="intake-language-stage">
             <div className="message-row behemoth is-visible">
               <div className="message-avatar" aria-hidden="true"><Bot size={15} /></div>
               <div className="message-bubble">
                 <div className="message-speaker">Behemoth</div>
-                <p>What language would you like to use for your intake?</p>
-                <div className="translation"><Languages size={12} aria-hidden="true" /> Puede elegir Español · Maaari kang pumili ng Tagalog.</div>
+                <p>Tell us what you want your care team to address. Write naturally in any language.</p>
+                <div className="translation"><Languages size={12} aria-hidden="true" /> Español · Tagalog · Français · العربية · हिन्दी · 中文 · 日本語 · and more</div>
               </div>
             </div>
-            <div className="intake-language-options" role="group" aria-label="Preferred language">
-              {(Object.keys(scripts) as PreferredLanguage[]).map((language) => {
-                const option = scripts[language];
-                return (
-                  <button
-                    className="intake-language-option"
-                    type="button"
-                    onClick={() => chooseLanguage(language)}
-                    disabled={disabled}
-                    key={language}
-                    lang={option.code}
-                  >
-                    <span className="intake-language-icon"><Languages size={17} aria-hidden="true" /></span>
-                    <span><strong>{option.nativeLabel}</strong><small lang="en">{option.englishLabel}</small></span>
-                    <Send size={14} aria-hidden="true" />
+            <form className="intake-composer intake-first-message" onSubmit={submitComplaint}>
+              <label htmlFor={complaintId}>Your first message — any language</label>
+              <span className="intake-label-translation">We detect the language only after you send it.</span>
+              <textarea
+                id={complaintId}
+                value={chiefComplaint}
+                onChange={(event) => {
+                  resetGeneratedInterpretation();
+                  setPreferredLanguage(null);
+                  setLanguageCode(null);
+                  setLanguageProvenance(null);
+                  setLanguageCandidate(null);
+                  setLanguageError(null);
+                  setChiefComplaint(event.target.value);
+                }}
+                placeholder="Describe every concern in your own words…"
+                maxLength={1000}
+                rows={4}
+                dir="auto"
+                autoFocus
+                disabled={disabled}
+              />
+              <div className="intake-composer-actions">
+                <div className="intake-demo-options">
+                  <button className="intake-demo-fill" type="button" onClick={() => setChiefComplaint(scripts.Tagalog.demoComplaint)} disabled={disabled}>
+                    <Sparkles size={13} aria-hidden="true" /> Tagalog shoulder
                   </button>
-                );
-              })}
-            </div>
-            <p className="intake-privacy-note"><BadgeCheck size={13} aria-hidden="true" /> Your original words stay attached · Tus palabras originales permanecen · Mananatili ang eksakto mong mga salita.</p>
+                  <button className="intake-demo-fill" type="button" onClick={() => setChiefComplaint(scripts.Tagalog.alternateDemo?.complaint ?? "")} disabled={disabled}>
+                    <Sparkles size={13} aria-hidden="true" /> Tagalog foot pain
+                  </button>
+                  <button className="intake-demo-fill" type="button" onClick={() => setChiefComplaint(scripts.Spanish.demoComplaint)} disabled={disabled}>
+                    <Sparkles size={13} aria-hidden="true" /> Spanish dizziness
+                  </button>
+                </div>
+                <button className="button intake-continue" type="submit" disabled={disabled || chiefComplaint.trim().length < 3}>
+                  Detect language &amp; continue <Send size={13} aria-hidden="true" />
+                </button>
+              </div>
+            </form>
+            <p className="intake-privacy-note"><BadgeCheck size={13} aria-hidden="true" /> The original message stays attached. Detection runs locally and does not change Athena.</p>
           </div>
         ) : null}
 
-        {script && stage !== "language" ? (
+        {stage === "language" ? (
+          <div className="intake-language-stage">
+            <IntakeMessage speaker="patient" patientName={patientName} patientInitials={patientInitials} text={chiefComplaint} languageCode={languageCandidate?.languageCode ?? languageCode ?? "und"} />
+            <form className="intake-language-confirm" onSubmit={submitManualLanguage}>
+              <div className="intake-language-confirm-copy">
+                <Languages size={18} aria-hidden="true" />
+                <div>
+                  <strong>{languageCandidate ? `${languageCandidate.languageName} detected — is that right?` : "Which language should we use?"}</strong>
+                  <span>{languageError}</span>
+                </div>
+              </div>
+              {languageCandidate ? (
+                <button className="intake-language-option" type="button" onClick={() => applyLanguage(languageCandidate, "detected")} disabled={disabled}>
+                  <span className="intake-language-icon"><Check size={17} aria-hidden="true" /></span>
+                  <span><strong>Use {languageCandidate.languageName}</strong><small>{languageCandidate.languageCode} · message preserved</small></span>
+                  <Send size={14} aria-hidden="true" />
+                </button>
+              ) : null}
+              <label htmlFor="manual-intake-language">Language name</label>
+              <div className="intake-language-manual-row">
+                <input
+                  id="manual-intake-language"
+                  value={manualLanguage}
+                  onChange={(event) => {
+                    setManualLanguage(event.target.value);
+                    setLanguageError(null);
+                  }}
+                  placeholder="e.g. French, Arabic, Hindi, Vietnamese"
+                  autoComplete="off"
+                  dir="auto"
+                  disabled={disabled}
+                />
+                <button className="button intake-continue" type="submit" disabled={disabled || manualLanguage.trim().length < 2}>
+                  Use language <Send size={13} aria-hidden="true" />
+                </button>
+              </div>
+              <small>Your first message will not be cleared or rewritten.</small>
+            </form>
+          </div>
+        ) : null}
+
+        {script && stage !== "language" && stage !== "complaint" ? (
           <>
             <IntakeMessage
-              speaker="behemoth"
+              speaker="patient"
               patientName={patientName}
               patientInitials={patientInitials}
-              text={script.complaintPrompt}
-              translated={script.complaintPromptEnglish}
+              text={chiefComplaint}
               languageCode={script.code}
             />
-
-            {stage === "complaint" ? (
-              <form className="intake-composer" onSubmit={submitComplaint}>
-                <label htmlFor={complaintId} lang={script.code}>{script.complaintLabel}</label>
-                <span className="intake-label-translation" lang="en">{script.complaintLabelEnglish}</span>
-                <textarea
-                  id={complaintId}
-                  value={chiefComplaint}
-                  onChange={(event) => {
-                    resetGeneratedInterpretation();
-                    setChiefComplaint(event.target.value);
-                  }}
-                  placeholder={script.complaintPlaceholder}
-                  maxLength={1000}
-                  rows={3}
-                  autoFocus
-                  disabled={disabled}
-                  lang={script.code}
-                />
-                <div className="intake-composer-actions">
-                  <div className="intake-demo-options">
-                    <button className="intake-demo-fill" type="button" onClick={() => {
-                      resetGeneratedInterpretation();
-                      setClarificationResponse("");
-                      setChiefComplaint(script.demoComplaint);
-                    }} disabled={disabled}>
-                      <Sparkles size={13} aria-hidden="true" /> {script.controls.useDemo}
-                    </button>
-                    {script.alternateDemo ? (
-                      <button className="intake-demo-fill" type="button" onClick={() => {
-                        resetGeneratedInterpretation();
-                        setClarificationResponse("");
-                        setChiefComplaint(script.alternateDemo?.complaint ?? "");
-                      }} disabled={disabled}>
-                        <Sparkles size={13} aria-hidden="true" /> {script.alternateDemo.buttonLabel}
-                      </button>
-                    ) : null}
-                  </div>
-                  <button className="button intake-continue" type="submit" disabled={disabled || chiefComplaint.trim().length < 3}>
-                    {script.controls.continue} <Send size={13} aria-hidden="true" />
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <IntakeMessage
-                speaker="patient"
-                patientName={patientName}
-                patientInitials={patientInitials}
-                text={chiefComplaint}
-                languageCode={script.code}
-              />
-            )}
 
             {stage === "clarification" ? (
               <>
@@ -712,11 +861,11 @@ export function PatientIntake({
                 <div className="intake-urgent-heading">
                   <AlertTriangle size={20} aria-hidden="true" />
                   <div>
-                    <strong lang={script.code}>{preferredLanguage === "Tagalog" ? "Kumilos ngayon" : "Actúe ahora"}</strong>
-                    <span>Deterministic safety check · no AI</span>
+                    <strong lang={preferredLanguage === "Tagalog" ? "tl" : preferredLanguage === "Spanish" ? "es" : "en"}>{preferredLanguage === "Tagalog" ? "Kumilos ngayon" : preferredLanguage === "Spanish" ? "Actúe ahora" : "Act now"}</strong>
+                    <span>Deterministic safety policy</span>
                   </div>
                 </div>
-                <p lang={script.code}>{urgentGuidance(script.code === "tl" ? "Tagalog" : "Spanish", safetyDecision.ruleId)}</p>
+                <p lang={preferredLanguage === "Tagalog" ? "tl" : preferredLanguage === "Spanish" ? "es" : "en"}>{urgentGuidance(preferredLanguage ?? "Undetermined", safetyDecision.ruleId)}</p>
                 <div className="intake-urgent-english" lang="en">
                   <Languages size={13} aria-hidden="true" />
                   {safetyDecision.guidance}
@@ -725,11 +874,17 @@ export function PatientIntake({
                 <button
                   className="button intake-urgent-retry"
                   type="button"
-                  onClick={() => sendUrgentIntake(safetyDecision, clarificationResponse)}
+                  onClick={() => preferredLanguage && languageCode && sendUrgentIntake({
+                    safety: safetyDecision,
+                    languageName: preferredLanguage,
+                    code: languageCode,
+                    provenance: languageProvenance ?? "detected",
+                    urgentClarification: clarificationResponse,
+                  })}
                   disabled={disabled}
                 >
                   <ShieldCheck size={14} aria-hidden="true" />
-                  {preferredLanguage === "Tagalog" ? "Buuin muli ang clinician handoff" : "Volver a crear el informe clínico"}
+                  {preferredLanguage === "Tagalog" ? "Buuin muli ang clinician handoff" : preferredLanguage === "Spanish" ? "Volver a crear el informe clínico" : "Rebuild clinician handoff"}
                 </button>
                 </div>
               </>
@@ -749,6 +904,7 @@ export function PatientIntake({
                   placeholder={clarification?.placeholder ?? script.clarificationPlaceholder}
                   maxLength={500}
                   rows={2}
+                  dir="auto"
                   autoFocus
                   disabled={disabled || interpretationStatus === "loading"}
                   lang={script.code}
@@ -769,8 +925,8 @@ export function PatientIntake({
                   ) : <span />}
                   <button className="button intake-continue" type="submit" disabled={disabled || interpretationStatus === "loading" || clarificationResponse.trim().length < 2}>
                     {interpretationStatus === "loading" ? (
-                      <><span className="spinner" /> {preferredLanguage === "Tagalog" ? "Isinasalin ng Sonnet" : "Sonnet está interpretando"}</>
-                    ) : <>{interpretationStatus === "error" ? (preferredLanguage === "Tagalog" ? "Subukang muli" : "Reintentar") : script.controls.reviewMeaning} <Send size={13} aria-hidden="true" /></>}
+                      <><span className="spinner" /> {preferredLanguage === "Tagalog" ? "Isinasalin ng Sonnet" : preferredLanguage === "Spanish" ? "Sonnet está interpretando" : "Sonnet is interpreting"}</>
+                    ) : <>{interpretationStatus === "error" ? (preferredLanguage === "Tagalog" ? "Subukang muli" : preferredLanguage === "Spanish" ? "Reintentar" : "Try again") : script.controls.reviewMeaning} <Send size={13} aria-hidden="true" /></>}
                   </button>
                 </div>
               </form>
@@ -793,12 +949,12 @@ export function PatientIntake({
                         <strong lang={script.code}>{script.confirmationHeading}</strong>
                         {interpretation.method === "sonnet" ? <em>Sonnet interpreted</em> : null}
                       </div>
-                      <span lang={script.code}>{confidenceLabel(script.code === "tl" ? "Tagalog" : "Spanish", interpretation.confidence)}</span>
+                      <span lang={script.code}>{confidenceLabel(preferredLanguage ?? "Undetermined", interpretation.confidence)}</span>
                     </div>
                     <div className="intake-confirmation-copy">
                       <div>
                         <span lang={script.code}>{script.nativeLabel}</span>
-                        <p lang={script.code}>{interpretation.patient}</p>
+                        <p lang={script.code} dir="auto">{interpretation.patient}</p>
                       </div>
                       <div>
                         <span lang="en">English clinician view · {interpretation.method === "sonnet" ? "Sonnet 5" : "verified demo"}</span>
@@ -822,10 +978,10 @@ export function PatientIntake({
                               />
                               <span className="priority-rank">{index + 1}</span>
                               <span className="priority-copy">
-                                <strong lang={script.code}>{topic.nativeSummary}</strong>
+                                <strong lang={script.code} dir="auto">{topic.nativeSummary}</strong>
                                 <small lang="en">{topic.englishSummary}</small>
                               </span>
-                              <em>{selected ? (preferredLanguage === "Tagalog" ? "Pangunahin" : "Prioridad") : ""}</em>
+                              <em>{selected ? (preferredLanguage === "Tagalog" ? "Pangunahin" : preferredLanguage === "Spanish" ? "Prioridad" : "Top priority") : ""}</em>
                             </label>
                           );
                         })}
@@ -874,17 +1030,17 @@ export function PatientIntake({
         ) : null}
       </div>
 
-      {stage !== "language" && stage !== "confirmed" && stage !== "urgent" ? (
+      {stage !== "complaint" && stage !== "confirmed" && stage !== "urgent" ? (
         <button
           className="intake-back"
           type="button"
           onClick={() => {
             resetGeneratedInterpretation();
-            if (stage === "complaint") {
-              changeLanguage();
+            if (stage === "language" || stage === "clarification") {
+              editFirstMessage();
               return;
             }
-            setStage(stage === "clarification" ? "complaint" : "clarification");
+            setStage("clarification");
           }}
           disabled={disabled || interpretationStatus === "loading"}
         >

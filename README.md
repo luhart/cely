@@ -14,16 +14,18 @@ Voice intake and text-message delivery, scanned-chart or PDF migration, ICD mapp
 
 ## Three-minute demo
 
-1. Choose Tagalog for Maya Santos and use the editable demo response. Maya says her shoulder is `kumikirot`, reports morning dizziness, and says she stopped her blood-pressure medicine.
-2. Behemoth preserves her exact words, asks one bounded question, extracts separate bilingual visit topics, and asks Maya which concern matters most before forwarding anything.
+1. Start with Maya Santos's first message in any language. For the golden path, choose the editable Tagalog shoulder demo: Maya says her shoulder is `kumikirot`, reports morning dizziness, and says she stopped her blood-pressure medicine. Behemoth detects Tagalog from that message; there is no language picker before the patient speaks.
+2. Behemoth preserves her exact words, asks one bounded question, extracts separate bilingual visit topics, and asks Maya which concern matters most before forwarding the confirmed intake into the Athena-grounded handoff workflow.
 3. The confirmed intake runs `previsit-intake-v1` against Maya's real synthetic Athena Preview record and appointment. The clinician sees Maya's preference separately from the clinical agenda, where Athena's hypertension and active-lisinopril context can elevate the medication discrepancy with cited evidence.
 4. Approve the handoff. Behemoth records a dry-run receipt for Preview appointment `2589077`; no Athena mutation occurs in the hackathon configuration.
 5. Compile the approved trace. The app emits `SKILL.md`, agent UI metadata, a permission policy, and a replayable golden trace.
-6. Switch to the red-flag replay—or type chest pressure with shortness of breath into the Spanish intake. The deterministic policy immediately displays bilingual emergency guidance, bypasses the model, and clinician acknowledgement performs no Athena write.
+6. Switch to the red-flag replay—or type Spanish chest pressure with shortness of breath into the universal first-message intake. The deterministic policy immediately displays bilingual emergency guidance, bypasses the model, and clinician acknowledgement performs no Athena write.
 
-For a second standard-path replay, choose `Halimbawa: pananakit ng paa`. It captures six months of left-foot pain with big-toe onset, an unspecified medication concern, a prior clinician's arthritis attribution, and a patient-observed food association. The clinician handoff preserves each as a separate cited concern without asserting gout, a medication identity, or a causal dietary trigger.
+For a second standard-path replay, choose `Tagalog foot pain`. It captures six months of left-foot pain with big-toe onset, an unspecified medication concern, a prior clinician's arthritis attribution, and a patient-observed food association. The clinician handoff preserves each as a separate cited concern without asserting gout, a medication identity, or a causal dietary trigger.
 
-The golden-path patient interaction and every safety gate remain deterministic. Free-form multilingual intake uses Sonnet for a bounded native-language restatement plus a real English clinician interpretation; model failure stops at the clarification step instead of displaying source-language text as English. Athena and Claude can be enabled independently, and handoff failures degrade to an evidence-linked fallback without swapping in another patient's canned summary.
+First-message language detection runs locally and deterministically. High-confidence results continue immediately; uncertain or short messages keep the exact original text and ask the patient to confirm or enter a language name. The detector covers common ISO languages, and the intake includes localized clarification controls for widely used languages with an English fallback for other supported languages. Correcting the intake language does not rewrite the message or change the language preference stored in Athena.
+
+Free-form multilingual intake then uses Sonnet for a bounded same-language restatement plus a real English clinician interpretation; model failure stops at the clarification step instead of displaying source-language text as English. Athena and Claude can be enabled independently, and handoff failures degrade to an evidence-linked fallback without swapping in another patient's canned summary.
 
 ## Quick start
 
@@ -71,7 +73,7 @@ The client refuses live mode against any base URL other than Athena Preview. It 
 
 ## Claude
 
-Set `AGENT_MODE=live` and `ANTHROPIC_API_KEY` to enable both AI stages. `claude-sonnet-5` handles free-form bilingual interpretation before patient confirmation and generates the downstream structured handoff. Both outputs are schema-constrained. The deterministic safety branch runs before either generation, emergencies bypass the models, and interpretation fails closed if Sonnet is unavailable.
+Set `AGENT_MODE=live` and `ANTHROPIC_API_KEY` to enable both AI stages. `claude-sonnet-5` handles free-form bilingual interpretation before patient confirmation and generates the downstream structured handoff. Both outputs are schema-constrained. Known English, Spanish, and Tagalog red-flag phrases are screened before either generation. For other languages, the route also runs the same deterministic policy over Sonnet's English interpretation and stops routine intake before confirmation when it matches; interpretation fails closed if Sonnet is unavailable.
 
 Each visit-agenda item carries a clinical rationale and one to three evidence citations. The clinician view renders those supporting patient statements or Athena facts directly beneath the agenda item so the recommendation is inspectable rather than merely asserted.
 
@@ -92,10 +94,11 @@ tests/                      policy and compiler contract tests
 
 - Synthetic or explicitly authorized Preview data only.
 - Patient words and chart facts remain distinct and cited.
-- Routine patient-entered text is not forwarded until the patient confirms the bilingual rendering; a red-flag report instead enters the immediate safety branch with its original wording and displayed guidance attached.
+- Routine text is sent to Sonnet only to generate the bilingual review; it does not enter the Athena-grounded handoff workflow until the patient confirms the native-language rendering. A directly recognized red-flag report instead enters the immediate safety branch with its original wording and displayed guidance attached.
 - A patient confirms the native-language restatement, not the English translation; the handoff preserves that provenance and any unresolved ambiguity for clinician review.
 - Missing chart data is “unavailable,” never assumed negative.
 - Deterministic English, Spanish, and Tagalog red-flag checks run before the model and can halt the normal workflow.
+- Other-language intake is screened again with deterministic rules over the English interpretation before the patient can confirm it; the evidence ledger distinguishes this from a direct pre-model match.
 - The model cannot diagnose, prescribe, approve itself, or write autonomously.
 - Every visit-agenda recommendation cites supplied evidence already present in the handoff.
 - Every write requires a human role, explicit approval, Preview environment, and a separate configuration flag.
@@ -106,7 +109,7 @@ All Behemoth application, workflow, policy, compiler, fixture, and skill code in
 
 ## Portable skills
 
-- `adaptive-patient-intake` — preferred-language agenda capture and bounded clarification
+- `adaptive-patient-intake` — detected-or-patient-corrected intake-language agenda capture and bounded clarification
 - `athena-chart-context` — minimum necessary chart retrieval with provenance
 - `safe-clinical-handoff` — concise preread with uncertainty and discrepancies
 - `athena-approved-action` — explicit approval, Preview write, and verification

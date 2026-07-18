@@ -30,9 +30,15 @@ export const ConfirmedConcernSchema = VisitTopicSchema.extend({
   mentionOrder: z.number().int().min(1).max(8),
 });
 
+export const IntakeLanguageNameSchema = z.string().trim().min(2).max(80);
+export const IntakeLanguageCodeSchema = z.string().trim().regex(/^(?:[a-z]{2,3}|und)(?:-[A-Za-z0-9]{2,8})*$/);
+export const LanguageProvenanceSchema = z.enum(["detected", "manual"]);
+
 export const ConfirmedIntakeSchema = z
   .object({
-    preferredLanguage: z.enum(["Tagalog", "Spanish"]),
+    preferredLanguage: IntakeLanguageNameSchema,
+    languageCode: IntakeLanguageCodeSchema.optional(),
+    languageProvenance: LanguageProvenanceSchema.optional(),
     chiefComplaint: z.string().trim().min(3).max(1000),
     clarificationQuestion: z.string().trim().min(3).max(500),
     clarificationResponse: z.string().trim().min(1).max(500),
@@ -88,7 +94,8 @@ export const ConfirmedIntakeSchema = z
   });
 
 export const IntakeInterpretationRequestSchema = z.object({
-  preferredLanguage: z.enum(["Tagalog", "Spanish"]),
+  preferredLanguage: IntakeLanguageNameSchema,
+  languageCode: IntakeLanguageCodeSchema.optional(),
   chiefComplaint: z.string().trim().min(3).max(1000),
   clarificationQuestion: z.string().trim().min(3).max(500),
   clarificationResponse: z.string().trim().min(1).max(500),
@@ -110,9 +117,12 @@ export const SafetyRuleIdSchema = z.enum([
 ]);
 
 export const UrgentIntakeSchema = z.object({
-  preferredLanguage: z.enum(["Tagalog", "Spanish"]),
+  preferredLanguage: IntakeLanguageNameSchema,
+  languageCode: IntakeLanguageCodeSchema.optional(),
+  languageProvenance: LanguageProvenanceSchema.optional(),
   chiefComplaint: z.string().trim().min(3).max(1000),
   clarificationResponse: z.string().trim().min(1).max(500).optional(),
+  englishSafetyTranslation: z.string().trim().min(3).max(1500).optional(),
   safetyRuleId: SafetyRuleIdSchema,
   guidanceDisplayed: z.literal(true),
 });

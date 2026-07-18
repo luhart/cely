@@ -192,8 +192,14 @@ describe("confirmed intake contract", () => {
     expect(parsed.success).toBe(false);
   });
 
-  test("rejects unsupported language and oversized patient input", () => {
-    expect(ConfirmedIntakeSchema.safeParse({ ...valid, preferredLanguage: "English" }).success).toBe(false);
+  test("accepts common intake languages and rejects malformed language metadata or oversized input", () => {
+    expect(ConfirmedIntakeSchema.safeParse({
+      ...valid,
+      preferredLanguage: "French",
+      languageCode: "fr",
+      languageProvenance: "detected",
+    }).success).toBe(true);
+    expect(ConfirmedIntakeSchema.safeParse({ ...valid, languageCode: "not a code" }).success).toBe(false);
     expect(ConfirmedIntakeSchema.safeParse({ ...valid, chiefComplaint: "x".repeat(1001) }).success).toBe(false);
   });
 
@@ -339,6 +345,129 @@ describe("intake interpretation guard", () => {
       ambiguities: [],
     });
     expect(interpretationValidationError(request, interpretation)).toContain("source-language");
+  });
+
+  test("allows same-language confirmation when the intake itself is English", () => {
+    const englishRequest = {
+      preferredLanguage: "English",
+      languageCode: "en",
+      chiefComplaint: "My left foot has hurt for six months.",
+      clarificationQuestion: "Where does the pain start?",
+      clarificationResponse: "It starts in my big toe.",
+    };
+    const interpretation = IntakeInterpretationSchema.parse({
+      patientInterpretation: "My left foot has hurt for six months, starting in my big toe.",
+      englishInterpretation: "My left foot has hurt for six months, starting in my big toe.",
+      visitTopics: [{
+        nativeSummary: "Six months of left-foot pain starting in the big toe",
+        englishSummary: "Six months of left-foot pain starting in the big toe",
+      }],
+      confidence: "medium",
+      ambiguities: [],
+    });
+    expect(interpretationValidationError(englishRequest, interpretation)).toBeNull();
+  });
+
+  test("rejects Tagalog leakage even when the claimed language label is wrong", () => {
+    const mislabeledRequest = { ...request, preferredLanguage: "French", languageCode: "fr" };
+    const interpretation = IntakeInterpretationSchema.parse({
+      patientInterpretation: request.chiefComplaint,
+      englishInterpretation: "Masakit ang ulo ko at parang wala akong marinig ngayon.",
+      visitTopics: [{ nativeSummary: "Masakit ang ulo", englishSummary: "Masakit ang ulo" }],
+      confidence: "low",
+      ambiguities: [],
+    });
+    expect(interpretationValidationError(mislabeledRequest, interpretation)).toContain("source language");
+  });
+
+  test("rejects French text presented as the English clinician view", () => {
+    const frenchRequest = {
+      preferredLanguage: "French",
+      languageCode: "fr",
+      chiefComplaint: "Bonjour docteur, j’ai mal au pied gauche depuis six mois et mon médicament ne fonctionne pas.",
+      clarificationQuestion: "Où la douleur commence-t-elle ?",
+      clarificationResponse: "La douleur commence dans le gros orteil.",
+    };
+    const interpretation = IntakeInterpretationSchema.parse({
+      patientInterpretation: "J’ai mal au pied gauche depuis six mois, avec une douleur qui commence dans le gros orteil.",
+      englishInterpretation: "La douleur au pied gauche dure depuis six mois et commence dans le gros orteil.",
+      visitTopics: [{ nativeSummary: "Douleur au pied gauche", englishSummary: "Douleur au pied gauche" }],
+      confidence: "low",
+      ambiguities: [],
+    });
+    expect(interpretationValidationError(frenchRequest, interpretation)).toContain("source language");
+  });
+
+  test("rejects short French leakage in the English clinician view", () => {
+    const frenchRequest = {
+      preferredLanguage: "French",
+      languageCode: "fr",
+      chiefComplaint: "Bonjour docteur, j’ai mal au pied gauche depuis six mois.",
+      clarificationQuestion: "Où la douleur commence-t-elle ?",
+      clarificationResponse: "La douleur commence dans le gros orteil.",
+    };
+    const interpretation = IntakeInterpretationSchema.parse({
+      patientInterpretation: "J’ai mal au pied gauche depuis six mois et la douleur commence dans le gros orteil.",
+      englishInterpretation: "Mal au pied gauche",
+      visitTopics: [{ nativeSummary: "Douleur au pied gauche", englishSummary: "Douleur au pied gauche" }],
+      confidence: "low",
+      ambiguities: [],
+    });
+    expect(interpretationValidationError(frenchRequest, interpretation)).toContain("source language");
+  });
+
+  test("rejects Japanese text presented as the English clinician view", () => {
+    const japaneseRequest = {
+      preferredLanguage: "Japanese",
+      languageCode: "ja",
+      chiefComplaint: "左足が六か月前から痛くて、薬が効いていないようです。",
+      clarificationQuestion: "痛みはどこから始まりますか？",
+      clarificationResponse: "足の親指から始まります。",
+    };
+    const interpretation = IntakeInterpretationSchema.parse({
+      patientInterpretation: "左足が六か月痛く、痛みは足の親指から始まります。",
+      englishInterpretation: "左足の痛みが六か月続き、足の親指から始まります。",
+      visitTopics: [{ nativeSummary: "左足の痛み", englishSummary: "左足の痛み" }],
+      confidence: "low",
+      ambiguities: [],
+    });
+    expect(interpretationValidationError(japaneseRequest, interpretation)).toContain("source-language");
+  });
+
+  test("accepts a real English interpretation of French intake", () => {
+    const frenchRequest = {
+      preferredLanguage: "French",
+      languageCode: "fr",
+      chiefComplaint: "Bonjour docteur, j’ai mal au pied gauche depuis six mois.",
+      clarificationQuestion: "Où la douleur commence-t-elle ?",
+      clarificationResponse: "La douleur commence dans le gros orteil.",
+    };
+    const interpretation = IntakeInterpretationSchema.parse({
+      patientInterpretation: "J’ai mal au pied gauche depuis six mois et la douleur commence dans le gros orteil.",
+      englishInterpretation: "The patient has had left foot pain for six months, starting in the big toe.",
+      visitTopics: [{ nativeSummary: "Douleur au pied gauche", englishSummary: "Left foot pain" }],
+      confidence: "medium",
+      ambiguities: [],
+    });
+    expect(interpretationValidationError(frenchRequest, interpretation)).toBeNull();
+  });
+
+  test("rejects a native restatement in the wrong language", () => {
+    const frenchRequest = {
+      preferredLanguage: "French",
+      languageCode: "fr",
+      chiefComplaint: "Bonjour docteur, j’ai mal au pied gauche depuis six mois.",
+      clarificationQuestion: "Où la douleur commence-t-elle ?",
+      clarificationResponse: "La douleur commence dans le gros orteil.",
+    };
+    const interpretation = IntakeInterpretationSchema.parse({
+      patientInterpretation: "The patient has had left foot pain for six months and it starts in the big toe.",
+      englishInterpretation: "The patient has had left foot pain for six months, starting in the big toe.",
+      visitTopics: [{ nativeSummary: "Left foot pain", englishSummary: "Left foot pain" }],
+      confidence: "low",
+      ambiguities: [],
+    });
+    expect(interpretationValidationError(frenchRequest, interpretation)).toContain("Native-language");
   });
 
   test("does not allow a model-generated high-confidence translation", () => {

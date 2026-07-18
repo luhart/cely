@@ -167,17 +167,29 @@ function interactiveConversation(patient: DemoScenario["patient"], intake: Confi
   const firstName = patient.displayName.split(" ")[0];
   const opening = intake.preferredLanguage === "Tagalog"
     ? `Kumusta ${firstName}. Ano-ano ang gusto mong siguraduhing matalakay sa iyong pagbisita?`
-    : `Hola ${firstName}. ¿Qué temas quiere asegurarse de hablar durante su visita?`;
+    : intake.preferredLanguage === "Spanish"
+      ? `Hola ${firstName}. ¿Qué temas quiere asegurarse de hablar durante su visita?`
+      : `Hello ${firstName}. Tell us what you want to make sure is addressed during your visit, in your own language.`;
   const confirmation = intake.preferredLanguage === "Tagalog"
     ? "Ito ba ang tamang pagkaunawa?"
-    : "¿Entendimos correctamente?";
+    : intake.preferredLanguage === "Spanish"
+      ? "¿Entendimos correctamente?"
+      : "The patient was asked to confirm the same-language restatement.";
   return [
     { speaker: "behemoth", text: opening, translated: "What topics do you want to make sure are addressed at your visit?" },
     { speaker: "patient", text: intake.chiefComplaint, translated: intake.englishInterpretation },
     { speaker: "behemoth", text: intake.clarificationQuestion, translated: "One bounded clarification was requested before interpretation." },
     { speaker: "patient", text: intake.clarificationResponse },
     { speaker: "behemoth", text: confirmation, translated: intake.englishInterpretation },
-    { speaker: "patient", text: intake.preferredLanguage === "Tagalog" ? "Oo, tama iyon." : "Sí, es correcto.", translated: "Yes, that is correct." },
+    {
+      speaker: "patient",
+      text: intake.preferredLanguage === "Tagalog"
+        ? "Oo, tama iyon."
+        : intake.preferredLanguage === "Spanish"
+          ? "Sí, es correcto."
+          : "Meaning and priority confirmed in the patient interface.",
+      translated: "Yes, that is correct.",
+    },
   ];
 }
 
@@ -186,6 +198,14 @@ function interactiveEvidence(intake: ConfirmedIntake): Evidence[] {
     ? "Sonnet-assisted bilingual intake"
     : "Deterministic bilingual intake";
   return [
+    ...(intake.languageCode ? [{
+      id: "derived-intake-language",
+      label: "Intake language",
+      value: `${intake.preferredLanguage} (${intake.languageCode})`,
+      source: "derived" as const,
+      resource: intake.languageProvenance === "manual" ? "Patient-corrected language selection" : "First-message deterministic detection",
+      observedAt: "Pre-visit intake",
+    }] : []),
     {
       id: "patient-chief-complaint",
       label: "Patient's exact words",
@@ -264,11 +284,21 @@ function urgentEvidence(intake: UrgentIntake, guidance: string | undefined): Evi
     {
       id: "derived-safety-rule",
       label: "Deterministic safety policy",
-      value: `${intake.safetyRuleId} matched before translation or model use. Guidance displayed: ${guidance ?? "emergency guidance"}`,
+      value: `${intake.safetyRuleId} matched ${intake.englishSafetyTranslation ? "after evaluating the attached English safety translation" : "directly in the patient's message before model use"}. Guidance displayed: ${guidance ?? "emergency guidance"}`,
       source: "derived",
-      resource: "previsit-intake-v1 / pre-model red-flag gate",
+      resource: intake.englishSafetyTranslation
+        ? "previsit-intake-v1 / deterministic rule over translated safety text"
+        : "previsit-intake-v1 / pre-model red-flag gate",
       observedAt: "Displayed immediately",
     },
+    ...(intake.englishSafetyTranslation ? [{
+      id: "derived-safety-translation",
+      label: "English safety translation",
+      value: intake.englishSafetyTranslation,
+      source: "derived" as const,
+      resource: "Language interpretation / safety screening",
+      observedAt: "Pre-visit intake",
+    }] : []),
   ];
 }
 
@@ -315,6 +345,7 @@ function urgentConcern(intake: UrgentIntake): Concern {
   return {
     id: "concern-patient-entered-urgent",
     patientWords: [intake.chiefComplaint, intake.clarificationResponse].filter(Boolean).join(" / "),
+    translated: intake.englishSafetyTranslation,
     duration: null,
     severity: null,
     priority: "urgent",
@@ -544,11 +575,8 @@ export async function runPrevisitWorkflow(input: RunInput): Promise<RunResult> {
     }
   }
 
-  const selectedLanguage = input.intake?.preferredLanguage ?? input.urgentIntake?.preferredLanguage;
-  if (selectedLanguage) patient = { ...patient, language: selectedLanguage };
-
   const safetyText = input.urgentIntake
-    ? `${input.urgentIntake.chiefComplaint} ${input.urgentIntake.clarificationResponse ?? ""}`
+    ? `${input.urgentIntake.chiefComplaint} ${input.urgentIntake.clarificationResponse ?? ""} ${input.urgentIntake.englishSafetyTranslation ?? ""}`
     : input.intake
       ? `${input.intake.chiefComplaint} ${input.intake.clarificationResponse}`
       : scenario.conversation

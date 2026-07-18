@@ -43,7 +43,7 @@ type AthenaStatus = {
 };
 
 const workflowSteps = [
-  { label: "Listen", detail: "preferred language", icon: Languages },
+  { label: "Listen", detail: "first-message language", icon: Languages },
   { label: "Ground", detail: "Athena context", icon: Cloud },
   { label: "Guard", detail: "deterministic safety", icon: ShieldCheck },
   { label: "Handoff", detail: "evidence-linked", icon: ClipboardCheck },
@@ -101,6 +101,7 @@ export function BehemothStudio() {
   const [compiled, setCompiled] = useState<CompiledSkill | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [intakeKey, setIntakeKey] = useState(0);
+  const [intakeLanguage, setIntakeLanguage] = useState<string | null>(null);
   const scenario = useMemo(() => getScenario(scenarioId), [scenarioId]);
   const traceMetrics = useMemo(() => run ? deriveTraceMetrics(run) : null, [run]);
   const orderedPatientConcerns = useMemo(() => {
@@ -140,10 +141,12 @@ export function BehemothStudio() {
     setReceipt(null);
     setCompiled(null);
     setError(null);
+    setIntakeLanguage(null);
     setIntakeKey((current) => current + 1);
   };
 
   const runWorkflow = async (intake?: ConfirmedIntake, urgentIntake?: UrgentIntake) => {
+    setIntakeLanguage(intake?.preferredLanguage ?? urgentIntake?.preferredLanguage ?? null);
     setPhase("running");
     setActiveStep(urgentIntake ? 2 : intake ? 1 : 0);
     setRun(null);
@@ -369,7 +372,10 @@ export function BehemothStudio() {
             <div className="avatar">{displayedInitials}</div>
             <div className="patient-meta">
               <strong>{displayedPatient.displayName}</strong>
-              <span>{displayedPatient.age} · {displayedPatient.language} preferred{run?.patient.identitySource === "athena" ? " · Athena linked" : ""}</span>
+              <span>
+                {displayedPatient.age} · {intakeLanguage ? `${intakeLanguage} intake language · ` : ""}{displayedPatient.language} chart preference
+                {run?.patient.identitySource === "athena" ? " · Athena linked" : ""}
+              </span>
             </div>
             <div className="appointment-meta"><span>Upcoming</span><strong>{displayedPatient.appointment}</strong></div>
           </div>
