@@ -1,0 +1,122 @@
+/* Cely brand tokens
+ *
+ * This file is a reference contract for future Cely experiences. It is not
+ * imported by the current application. Keep token names stable when the
+ * implementation phase begins.
+ */
+
+:root {
+  /* Core color */
+  --cely-color-canvas: #fffcf7;
+  --cely-color-paper: #f7f2e9;
+  --cely-color-ink: #21182b;
+  --cely-color-ink-muted: #4c4353;
+  --cely-color-brand: #4b39c5;
+  --cely-color-brand-soft: #ede9ff;
+  --cely-color-line: #d8d0db;
+  --cely-color-gold-decorative: #d8b84f;
+
+  /* Interactive color */
+  --cely-color-action: var(--cely-color-brand);
+  --cely-color-action-text: var(--cely-color-canvas);
+  --cely-color-focus: var(--cely-color-brand);
+  --cely-color-selection: var(--cely-color-brand-soft);
+
+  /* Semantic color pairs */
+  --cely-color-evidence: #255f85;
+  --cely-color-evidence-background: #eaf3f7;
+  --cely-color-confirmed: #13715b;
+  --cely-color-confirmed-background: #e8f3ee;
+  --cely-color-review: #8c5d00;
+  --cely-color-review-background: #fff1d6;
+  --cely-color-urgent: #b4233f;
+  --cely-color-urgent-background: #fce8ed;
+
+  /* Font families */
+  --cely-font-display: "Newsreader", "Noto Serif", Georgia, serif;
+  --cely-font-body: "IBM Plex Sans", "Noto Sans", system-ui, sans-serif;
+  --cely-font-mono: "IBM Plex Mono", "Noto Sans Mono", ui-monospace, monospace;
+  --cely-font-script-fallback: "Noto Sans", system-ui, sans-serif;
+
+  /* Font weights */
+  --cely-font-weight-regular: 400;
+  --cely-font-weight-medium: 500;
+  --cely-font-weight-semibold: 600;
+
+  /* Type scale */
+  --cely-font-size-display: 3.5rem;
+  --cely-line-height-display: 3.75rem;
+  --cely-font-size-heading-1: 2.5rem;
+  --cely-line-height-heading-1: 2.75rem;
+  --cely-font-size-heading-2: 1.75rem;
+  --cely-line-height-heading-2: 2.125rem;
+  --cely-font-size-body: 1rem;
+  --cely-line-height-body: 1.5rem;
+  --cely-font-size-supporting: 0.875rem;
+  --cely-line-height-supporting: 1.25rem;
+  --cely-font-size-label: 0.75rem;
+  --cely-line-height-label: 1rem;
+
+  /* Letter spacing and case */
+  --cely-letter-spacing-display: -0.02em;
+  --cely-letter-spacing-heading: -0.015em;
+  --cely-letter-spacing-body: 0;
+  --cely-letter-spacing-label: 0;
+  --cely-text-transform: none;
+
+  /* Four-pixel spacing scale */
+  --cely-space-0: 0;
+  --cely-space-1: 0.25rem;
+  --cely-space-2: 0.5rem;
+  --cely-space-3: 0.75rem;
+  --cely-space-4: 1rem;
+  --cely-space-6: 1.5rem;
+  --cely-space-8: 2rem;
+  --cely-space-12: 3rem;
+  --cely-space-16: 4rem;
+  --cely-space-24: 6rem;
+
+  /* Layout */
+  --cely-layout-reading-max: 45rem;
+  --cely-layout-product-max: 75rem;
+  --cely-layout-grid-columns: 12;
+  --cely-layout-grid-gap: var(--cely-space-6);
+  --cely-target-min: 2.75rem;
+  --cely-rule-width: 1px;
+
+  /* Radius */
+  --cely-radius-none: 0;
+  --cely-radius-small: 0.25rem;
+  --cely-radius-medium: 0.5rem;
+  --cely-radius-large: 0.75rem;
+  --cely-radius-circle: 50%;
+
+  /* Focus */
+  --cely-focus-width: 3px;
+  --cely-focus-style: solid;
+  --cely-focus-offset: 2px;
+  --cely-focus-outline: var(--cely-focus-width) var(--cely-focus-style)
+    var(--cely-color-focus);
+
+  /* Minimal elevation */
+  --cely-elevation-none: none;
+  --cely-elevation-raised: 0 1px 2px rgb(33 24 43 / 8%);
+  --cely-elevation-overlay: 0 8px 24px rgb(33 24 43 / 12%);
+
+  /* Motion */
+  --cely-motion-duration-interface: 160ms;
+  --cely-motion-duration-explanatory: 240ms;
+  --cely-motion-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --cely-motion-distance-small: 0.25rem;
+  --cely-motion-distance-medium: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --cely-motion-duration-interface: 0ms;
+    --cely-motion-duration-explanatory: 0ms;
+    --cely-motion-distance-small: 0;
+    --cely-motion-distance-medium: 0;
+  }
+}
+

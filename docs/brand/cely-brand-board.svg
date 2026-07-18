@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="board-title board-description">
+  <title id="board-title">Cely brand board</title>
+  <desc id="board-description">A one-page editorial specimen for the Cely identity, including the wordmark, tagline, color, typography, carry-line motif, multilingual samples, evidence roles, and semantic states.</desc>
+  <defs>
+    <style>
+      .display { font-family: "Newsreader", "Noto Serif", Georgia, serif; }
+      .body { font-family: "IBM Plex Sans", "Noto Sans", -apple-system, BlinkMacSystemFont, sans-serif; }
+      .mono { font-family: "IBM Plex Mono", "Noto Sans Mono", ui-monospace, monospace; }
+      .script { font-family: "Noto Sans", "IBM Plex Sans", sans-serif; }
+      .heading { font-size: 28px; font-weight: 600; letter-spacing: -0.4px; fill: #21182b; }
+      .body-copy { font-size: 16px; font-weight: 400; fill: #21182b; }
+      .support { font-size: 13px; font-weight: 400; fill: #4c4353; }
+      .label { font-size: 12px; font-weight: 600; fill: #4c4353; }
+      .rule { stroke: #d8d0db; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#fffcf7"/>
+
+  <g id="identity">
+    <g transform="translate(64 42) scale(.5047619)" fill="#21182b" aria-hidden="true">
+      <g transform="translate(0 154) scale(.1 -.1)">
+        <path d="M933 32Q990 32 1045.5 48.5Q1101 65 1154 102L1353 411H1384L1301 29Q1194 -1 1098.5 -12.5Q1003 -24 889 -24Q652 -24 469.5 60.5Q287 145 183.5 312Q80 479 80 729Q80 944 180 1107.5Q280 1271 459 1362.5Q638 1454 873 1454Q950 1454 1015.5 1447Q1081 1440 1155 1424L1250 1495H1265L1366 970H1335L1136 1283Q1058 1344 988.5 1367.5Q919 1391 845 1391Q729 1391 633.5 1333Q538 1275 481.5 1140Q425 1005 425 773Q425 538 494.5 372Q564 206 679.5 119Q795 32 933 32Z"/>
+        <path d="M1944 1048Q2123 1048 2224.5 942.5Q2326 837 2340 642H1714Q1714 631 1714 619Q1714 381 1801 278Q1888 175 2054 175Q2136 175 2206.5 205Q2277 235 2339 305L2360 288Q2259 113 2155.5 44.5Q2052 -24 1919 -24Q1776 -24 1666.5 36Q1557 96 1495 211.5Q1433 327 1433 492Q1433 641 1492 768Q1551 895 1664.5 971.5Q1778 1048 1944 1048ZM1911 986Q1829 986 1779.5 922Q1730 858 1718 714H2069Q2055 864 2017 925Q1979 986 1911 986Z"/>
+        <path d="M2807 62 2926 30V0H2396V30L2515 62V1253Q2496 1267 2453.5 1296Q2411 1325 2353 1366V1390L2793 1488H2807Z"/>
+        <path d="M3185 -461Q3115 -461 3069 -423.5Q3023 -386 3023 -315Q3023 -267 3046.5 -240Q3070 -213 3092 -213Q3106 -213 3148.5 -235.5Q3191 -258 3256 -258Q3336 -258 3383.5 -230.5Q3431 -203 3469 -120L3503 -44L2991 952L2877 992V1024H3444V991L3316 958L3642 295L3875 963L3745 991V1024H4072V991L3957 963L3547 -99Q3493 -237 3438.5 -316Q3384 -395 3322 -428Q3260 -461 3185 -461ZM3150 -452Q3240 -458 3370 -454Q3500 -450 3600 -420H4100V-370H3600Q3450 -388 3260 -418L3170 -414Z"/>
+      </g>
+    </g>
+    <text x="64" y="223" class="display" font-size="58" font-weight="600" letter-spacing="-1.2" fill="#21182b">Every concern, clearly carried.</text>
+
+    <line x1="1082" y1="62" x2="1082" y2="228" stroke="#4b39c5" stroke-width="3"/>
+    <text x="1110" y="92" class="body" font-size="14" font-weight="500" fill="#4c4353">Pronounced Sell-ee</text>
+    <text x="1110" y="134" class="display" font-size="25" font-weight="600" fill="#21182b">Understanding, carried</text>
+    <text x="1110" y="165" class="display" font-size="25" font-weight="600" fill="#21182b">safely into care</text>
+    <text x="1110" y="211" class="body" font-size="14" fill="#4c4353">Governed clinical workflow intelligence</text>
+  </g>
+
+  <line x1="64" y1="274" x2="1536" y2="274" class="rule"/>
+
+  <g id="carry-line">
+    <text x="64" y="323" class="body heading">From a person’s words to reviewed care</text>
+    <text x="1536" y="321" class="body support" text-anchor="end">The line explains provenance; each point remains legible on its own.</text>
+
+    <line x1="176" y1="389" x2="1416" y2="389" stroke="#4b39c5" stroke-width="2"/>
+    <circle cx="176" cy="389" r="7" fill="#fffcf7" stroke="#4b39c5" stroke-width="3"/>
+    <circle cx="796" cy="389" r="7" fill="#fffcf7" stroke="#4b39c5" stroke-width="3"/>
+    <circle cx="1416" cy="389" r="7" fill="#fffcf7" stroke="#4b39c5" stroke-width="3"/>
+
+    <text x="64" y="369" class="body label" fill="#4b39c5">Patient wording</text>
+    <text x="64" y="426" class="body body-copy">“Masakit ang kaliwa kong paa.”</text>
+    <text x="64" y="451" class="body support">Original Tagalog is preserved.</text>
+
+    <text x="686" y="369" class="body label" fill="#255f85">Supporting evidence</text>
+    <text x="686" y="426" class="body body-copy">Medication list: allopurinol, active</text>
+    <text x="686" y="451" class="mono support">athena:medication:2026-04-03</text>
+
+    <text x="1260" y="369" class="body label" fill="#13715b">Reviewed action</text>
+    <text x="1260" y="426" class="body body-copy">Review pain pattern</text>
+    <text x="1260" y="451" class="body support">and medication use.</text>
+  </g>
+
+  <line x1="64" y1="486" x2="1536" y2="486" class="rule"/>
+
+  <g id="color">
+    <text x="64" y="535" class="body heading">Color</text>
+    <text x="64" y="565" class="body support">Warm foundations, precise action, and safety color with a defined job.</text>
+
+    <g transform="translate(64 592)">
+      <rect width="66" height="54" fill="#fffcf7" stroke="#d8d0db"/>
+      <text y="76" class="body label">Canvas</text>
+      <text y="94" class="mono" font-size="10" fill="#4c4353">#fffcf7</text>
+    </g>
+    <g transform="translate(150 592)">
+      <rect width="66" height="54" fill="#f7f2e9"/>
+      <text y="76" class="body label">Paper</text>
+      <text y="94" class="mono" font-size="10" fill="#4c4353">#f7f2e9</text>
+    </g>
+    <g transform="translate(236 592)">
+      <rect width="66" height="54" fill="#21182b"/>
+      <text y="76" class="body label">Ink</text>
+      <text y="94" class="mono" font-size="10" fill="#4c4353">#21182b</text>
+    </g>
+    <g transform="translate(322 592)">
+      <rect width="66" height="54" fill="#4c4353"/>
+      <text y="76" class="body label">Muted ink</text>
+      <text y="94" class="mono" font-size="10" fill="#4c4353">#4c4353</text>
+    </g>
+    <g transform="translate(408 592)">
+      <rect width="66" height="54" fill="#4b39c5"/>
+      <text y="76" class="body label">Iris</text>
+      <text y="94" class="mono" font-size="10" fill="#4c4353">#4b39c5</text>
+    </g>
+    <g transform="translate(494 592)">
+      <rect width="66" height="54" fill="#ede9ff"/>
+      <text y="76" class="body label">Iris soft</text>
+      <text y="94" class="mono" font-size="10" fill="#4c4353">#ede9ff</text>
+    </g>
+    <g transform="translate(580 592)">
+      <rect width="66" height="54" fill="#d8d0db"/>
+      <text y="76" class="body label">Rule</text>
+      <text y="94" class="mono" font-size="10" fill="#4c4353">#d8d0db</text>
+    </g>
+    <g transform="translate(666 592)">
+      <rect width="66" height="54" fill="#d8b84f"/>
+      <text y="76" class="body label">Gold</text>
+      <text y="94" class="mono" font-size="10" fill="#4c4353">#d8b84f</text>
+    </g>
+  </g>
+
+  <g id="typography">
+    <line x1="792" y1="526" x2="792" y2="683" class="rule"/>
+    <text x="840" y="535" class="body heading">Type speaks softly and precisely</text>
+    <text x="840" y="596" class="display" font-size="42" font-weight="600" letter-spacing="-0.8" fill="#21182b">Listen first.</text>
+    <text x="840" y="633" class="body body-copy">Connect the concern to its source.</text>
+    <text x="840" y="666" class="mono" font-size="13" fill="#255f85">athena:medication:2026-04-03</text>
+
+    <text x="1338" y="570" class="body label">Display</text>
+    <text x="1536" y="570" class="mono support" text-anchor="end">56 / 60</text>
+    <line x1="1338" y1="584" x2="1536" y2="584" class="rule"/>
+    <text x="1338" y="613" class="body label">Body</text>
+    <text x="1536" y="613" class="mono support" text-anchor="end">16 / 24</text>
+    <line x1="1338" y1="627" x2="1536" y2="627" class="rule"/>
+    <text x="1338" y="656" class="body label">Evidence</text>
+    <text x="1536" y="656" class="mono support" text-anchor="end">12 / 16</text>
+  </g>
+
+  <line x1="64" y1="714" x2="1536" y2="714" class="rule"/>
+
+  <g id="multilingual">
+    <text x="64" y="762" class="body heading">The language a person prefers</text>
+    <text x="64" y="790" class="body support">Script-aware type, natural direction, and room for the full thought.</text>
+
+    <text x="64" y="829" class="body label">Tagalog</text>
+    <text x="178" y="829" class="script body-copy" lang="tl">Saan pinakamasakit?</text>
+    <text x="64" y="862" class="body label">Spanish</text>
+    <text x="178" y="862" class="script body-copy" lang="es">¿Dónde siente el dolor con más intensidad?</text>
+    <text x="64" y="895" class="body label">Arabic</text>
+    <text x="178" y="895" class="script body-copy" lang="ar">أين تشعر بالألم أكثر؟</text>
+    <text x="64" y="928" class="body label">Hindi</text>
+    <text x="178" y="928" class="script body-copy" lang="hi">दर्द सबसे ज़्यादा कहाँ है?</text>
+    <text x="64" y="961" class="body label">Japanese</text>
+    <text x="178" y="961" class="script body-copy" lang="ja">痛みがいちばん強いのはどこですか。</text>
+  </g>
+
+  <g id="evidence-roles">
+    <line x1="744" y1="754" x2="744" y2="966" class="rule"/>
+    <text x="792" y="762" class="body heading">Evidence remains distinct</text>
+    <text x="1536" y="760" class="body support" text-anchor="end">Synthetic example</text>
+
+    <text x="792" y="810" class="body label">Patient report</text>
+    <text x="950" y="810" class="body body-copy">Sharp left foot pain for 6 months.</text>
+    <line x1="792" y1="828" x2="1536" y2="828" class="rule"/>
+
+    <text x="792" y="855" class="body label" fill="#255f85">Chart fact</text>
+    <text x="950" y="855" class="body body-copy">Allopurinol appears on the active list.</text>
+    <line x1="792" y1="873" x2="1536" y2="873" class="rule"/>
+
+    <text x="792" y="900" class="body label" fill="#8c5d00">Interpretation</text>
+    <text x="950" y="900" class="body body-copy">Food-associated episodes need clarification.</text>
+    <line x1="792" y1="918" x2="1536" y2="918" class="rule"/>
+
+    <g transform="translate(792 944)">
+      <rect width="38" height="3" fill="#255f85"/>
+      <text x="50" y="7" class="body label" fill="#255f85">Evidence</text>
+    </g>
+    <g transform="translate(980 944)">
+      <rect width="38" height="3" fill="#13715b"/>
+      <text x="50" y="7" class="body label" fill="#13715b">Confirmed</text>
+    </g>
+    <g transform="translate(1176 944)">
+      <rect width="38" height="3" fill="#8c5d00"/>
+      <text x="50" y="7" class="body label" fill="#8c5d00">Needs review</text>
+    </g>
+    <g transform="translate(1396 944)">
+      <rect width="38" height="3" fill="#b4233f"/>
+      <text x="50" y="7" class="body label" fill="#b4233f">Urgent</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="social-title social-description">
+  <title id="social-title">Cely: Every concern, clearly carried</title>
+  <desc id="social-description">Cely connects patient wording, supporting evidence, and a reviewed action.</desc>
+  <defs>
+    <style>
+      .display { font-family: "Newsreader", "Noto Serif", Georgia, serif; }
+      .body { font-family: "IBM Plex Sans", "Noto Sans", -apple-system, BlinkMacSystemFont, sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="630" fill="#fffcf7"/>
+  <image x="72" y="48" width="196" height="97" href="cely-wordmark.svg" xlink:href="cely-wordmark.svg" aria-hidden="true"/>
+  <text x="1128" y="91" class="body" font-size="16" fill="#4c4353" text-anchor="end">Governed clinical workflow intelligence</text>
+  <line x1="72" y1="166" x2="1128" y2="166" stroke="#d8d0db"/>
+
+  <text x="72" y="281" class="display" font-size="78" font-weight="600" letter-spacing="-1.6" fill="#21182b">Every concern,</text>
+  <text x="72" y="369" class="display" font-size="78" font-weight="600" letter-spacing="-1.6" fill="#21182b">clearly carried.</text>
+
+  <line x1="72" y1="482" x2="1128" y2="482" stroke="#4b39c5" stroke-width="3"/>
+  <circle cx="72" cy="482" r="7" fill="#fffcf7" stroke="#4b39c5" stroke-width="3"/>
+  <circle cx="600" cy="482" r="7" fill="#fffcf7" stroke="#4b39c5" stroke-width="3"/>
+  <circle cx="1128" cy="482" r="7" fill="#fffcf7" stroke="#4b39c5" stroke-width="3"/>
+
+  <text x="72" y="530" class="body" font-size="16" font-weight="600" fill="#21182b">Patient wording</text>
+  <text x="600" y="530" class="body" font-size="16" font-weight="600" fill="#255f85" text-anchor="middle">Supporting evidence</text>
+  <text x="1128" y="530" class="body" font-size="16" font-weight="600" fill="#13715b" text-anchor="end">Reviewed action</text>
+  <text x="72" y="583" class="body" font-size="17" fill="#4c4353">Understanding, carried safely into care</text>
+  <rect x="1088" y="578" width="40" height="4" fill="#d8b84f"/>
+</svg>
