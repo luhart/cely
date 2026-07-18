@@ -9,12 +9,14 @@ description: Turn patient concerns and cited chart context into a concise, uncer
 
 1. Lead with the issue that most changes the visit or requires immediate routing.
 2. Summarize patient concerns without converting symptoms into diagnoses.
-3. Include only chart history relevant to the current agenda.
-4. Put patient/chart conflicts in a dedicated discrepancies section.
-5. List unanswered questions instead of guessing.
-6. Give every agenda item a concise label, a short clinical rationale, and one to three supplied evidence IDs.
-7. Include every agenda evidence ID in the handoff's global evidence IDs.
-8. Keep the result readable in one minute.
+3. Preserve every patient-confirmed concern and keep the patient-selected top concern distinct from clinical urgency.
+4. Reorder a patient preference only when safety or cited chart context supports it, and explain the reason.
+5. Include only chart history relevant to the current agenda.
+6. Put patient/chart conflicts in a dedicated discrepancies section.
+7. List unanswered questions instead of guessing.
+8. Give every agenda item a concise label, a short clinical rationale, and one to three supplied evidence IDs.
+9. Include every agenda evidence ID in the handoff's global evidence IDs.
+10. Keep the result readable in one minute.
 
 ## Output contract
 

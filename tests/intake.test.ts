@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  ConcernSchema,
   ConfirmedIntakeSchema,
   IntakeInterpretationSchema,
   RunInputSchema,
@@ -23,6 +24,109 @@ describe("confirmed intake contract", () => {
 
   test("accepts a bounded, explicitly confirmed interpretation", () => {
     expect(ConfirmedIntakeSchema.parse(valid)).toEqual(valid);
+  });
+
+  test("accepts patient-confirmed concerns and an optional top concern", () => {
+    const confirmedConcerns = [
+      {
+        id: "headache",
+        nativeSummary: "Pananakit ng ulo sa umaga",
+        englishSummary: "Morning headaches",
+        mentionOrder: 1,
+      },
+      {
+        id: "hearing",
+        nativeSummary: "Pagbabago sa pandinig",
+        englishSummary: "Change in hearing",
+        mentionOrder: 2,
+      },
+    ];
+    const parsed = ConfirmedIntakeSchema.parse({
+      ...valid,
+      confirmedConcerns,
+      topConcernId: "hearing",
+      priorityConfirmed: true,
+    });
+
+    expect(parsed.confirmedConcerns).toEqual(confirmedConcerns);
+    expect(parsed.topConcernId).toBe("hearing");
+  });
+
+  test("accepts an explicit no-preference priority confirmation", () => {
+    const parsed = ConfirmedIntakeSchema.safeParse({
+      ...valid,
+      confirmedConcerns: [{
+        id: "headache",
+        nativeSummary: "Pananakit ng ulo",
+        englishSummary: "Headache",
+        mentionOrder: 1,
+      }],
+      topConcernId: null,
+      priorityConfirmed: true,
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  test("rejects duplicate confirmed-concern IDs", () => {
+    const parsed = ConfirmedIntakeSchema.safeParse({
+      ...valid,
+      confirmedConcerns: [
+        { id: "same", nativeSummary: "Una", englishSummary: "First", mentionOrder: 1 },
+        { id: "same", nativeSummary: "Ikalawa", englishSummary: "Second", mentionOrder: 2 },
+      ],
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  test.each([
+    ["duplicate", [1, 1]],
+    ["gap", [1, 3]],
+  ])("rejects %s confirmed-concern mention order", (_case, mentionOrders) => {
+    const parsed = ConfirmedIntakeSchema.safeParse({
+      ...valid,
+      confirmedConcerns: mentionOrders.map((mentionOrder, index) => ({
+        id: `concern-${index + 1}`,
+        nativeSummary: `Paksa ${index + 1}`,
+        englishSummary: `Topic ${index + 1}`,
+        mentionOrder,
+      })),
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  test("rejects a top concern that is absent from the confirmed concern list", () => {
+    const parsed = ConfirmedIntakeSchema.safeParse({
+      ...valid,
+      confirmedConcerns: [{
+        id: "headache",
+        nativeSummary: "Pananakit ng ulo",
+        englishSummary: "Headache",
+        mentionOrder: 1,
+      }],
+      topConcernId: "not-supplied",
+      priorityConfirmed: true,
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  test("keeps patient preference separate from clinical priority", () => {
+    const concern = ConcernSchema.parse({
+      id: "headache",
+      patientWords: "Masakit ang ulo ko",
+      translated: "I have a headache",
+      duration: null,
+      severity: null,
+      mentionOrder: 2,
+      patientPriority: "top",
+      priority: "routine",
+    });
+
+    expect(concern.patientPriority).toBe("top");
+    expect(concern.priority).toBe("routine");
   });
 
   test("rejects an interpretation the patient did not confirm", () => {
@@ -158,6 +262,10 @@ describe("intake interpretation guard", () => {
     const interpretation = IntakeInterpretationSchema.parse({
       patientInterpretation: "Masakit ang ulo ngayon at parang wala nang marinig; parang may bumubugbog sa ulo.",
       englishInterpretation: "The patient reports a current headache, reduced hearing, and a sensation as if someone were hitting their head.",
+      visitTopics: [
+        { nativeSummary: "Pananakit ng ulo", englishSummary: "Headache" },
+        { nativeSummary: "Pagbabago sa pandinig", englishSummary: "Change in hearing" },
+      ],
       confidence: "medium",
       ambiguities: ["It is unclear whether hearing is completely absent or reduced."],
     });
@@ -168,6 +276,7 @@ describe("intake interpretation guard", () => {
     const interpretation = IntakeInterpretationSchema.parse({
       patientInterpretation: request.chiefComplaint,
       englishInterpretation: `Patient report in Tagalog: ${request.chiefComplaint}`,
+      visitTopics: [{ nativeSummary: "Masakit ang ulo", englishSummary: "Headache" }],
       confidence: "low",
       ambiguities: [],
     });
@@ -178,8 +287,23 @@ describe("intake interpretation guard", () => {
     expect(IntakeInterpretationSchema.safeParse({
       patientInterpretation: "Masakit ang ulo.",
       englishInterpretation: "The patient has a headache.",
+      visitTopics: [{ nativeSummary: "Masakit ang ulo", englishSummary: "Headache" }],
       confidence: "high",
       ambiguities: [],
     }).success).toBe(false);
+  });
+
+  test("requires one to eight structured visit topics", () => {
+    const base = {
+      patientInterpretation: "Masakit ang ulo.",
+      englishInterpretation: "The patient has a headache.",
+      confidence: "medium" as const,
+      ambiguities: [],
+    };
+    const topic = { nativeSummary: "Masakit ang ulo", englishSummary: "Headache" };
+
+    expect(IntakeInterpretationSchema.safeParse({ ...base, visitTopics: [] }).success).toBe(false);
+    expect(IntakeInterpretationSchema.safeParse({ ...base, visitTopics: Array.from({ length: 8 }, () => topic) }).success).toBe(true);
+    expect(IntakeInterpretationSchema.safeParse({ ...base, visitTopics: Array.from({ length: 9 }, () => topic) }).success).toBe(false);
   });
 });

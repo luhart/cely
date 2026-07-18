@@ -111,7 +111,7 @@ button { font: inherit; }
 .message-bubble p { margin: 0; color: #34413b; font-size: 11px; line-height: 1.5; }
 .translation { margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(100,120,110,.12); display: flex; gap: 5px; color: #87918d; font-size: 9px; line-height: 1.4; }
 .translation svg { flex: 0 0 auto; margin-top: 1px; }
-.channel-footer { height: 48px; padding: 0 18px; border-top: 1px solid var(--soft-line); display: flex; align-items: center; gap: 18px; color: #697770; font-size: 9px; font-weight: 630; }
+.channel-footer { min-height: 48px; padding: 9px 18px; border-top: 1px solid var(--soft-line); display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; color: #697770; font-size: 9px; font-weight: 630; }
 .channel-footer span { display: inline-flex; align-items: center; gap: 5px; }
 .channel-footer svg { color: var(--green); }
 
@@ -137,6 +137,22 @@ button { font: inherit; }
 .execution-strip span { display: inline-flex; align-items: center; gap: 4px; padding: 5px 7px; border-radius: 7px; font-size: 8px; font-weight: 690; text-transform: capitalize; }
 .execution-strip span.live { color: var(--green); background: var(--green-soft); }
 .execution-strip span.fallback { color: #68746e; background: #f0f3f1; }
+.trace-metrics { margin: 0 0 13px; padding: 8px 9px; border: 1px solid #e2e9e5; border-radius: 9px; display: flex; flex-wrap: wrap; gap: 6px 13px; color: #77837d; background: #fafcfb; font-size: 8px; }
+.trace-metrics span { white-space: nowrap; }
+.trace-metrics strong { margin-right: 2px; color: #415049; font-size: 9px; }
+.patient-priorities-card { margin-bottom: 13px; padding: 11px; border: 1px solid #d8e4de; border-radius: 11px; background: #f5faf7; }
+.patient-priorities-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.patient-priorities-heading > div { display: flex; align-items: center; gap: 6px; color: var(--green); }
+.patient-priorities-heading strong { color: #3f4d46; font-size: 10px; }
+.patient-priorities-heading > span { color: #87938d; font-size: 7px; text-transform: uppercase; letter-spacing: .06em; }
+.patient-priorities-card ol { list-style: none; margin: 9px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.patient-priorities-card li { min-width: 0; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.patient-priorities-card li > span { width: 18px; height: 18px; border-radius: 6px; display: grid; place-items: center; color: var(--green); background: white; font-size: 8px; font-weight: 760; }
+.patient-priorities-card li strong, .patient-priorities-card li small { display: block; }
+.patient-priorities-card li strong { color: #43514a; font-size: 9px; line-height: 1.35; }
+.patient-priorities-card li small { margin-top: 2px; color: #87938d; font-size: 8px; line-height: 1.35; }
+.patient-priorities-card li em { padding: 4px 6px; border-radius: 999px; color: #7a5d1d; background: #f9edc9; font-size: 7px; font-style: normal; font-weight: 760; text-transform: uppercase; }
+.patient-priorities-card > p { margin: 8px 0 0 26px; color: #7c8982; font-size: 8px; }
 .handoff-section { padding: 14px 0; border-top: 1px solid var(--soft-line); }
 .handoff-section h4 { margin: 0 0 10px; font-size: 10px; }
 .handoff-section ol { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -169,6 +185,8 @@ button { font: inherit; }
 .approval-copy span { max-width: 330px; margin-top: 3px; color: #7e8a84; font-size: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .button-approve { height: 32px; flex: 0 0 auto; color: white; background: var(--green); font-size: 9px; }
 .button-compile { height: 32px; flex: 0 0 auto; color: white; background: #2f3540; font-size: 9px; }
+.interpreter-limitation { margin-top: 9px; display: flex; align-items: flex-start; gap: 6px; color: #7b8781; font-size: 8px; line-height: 1.4; }
+.interpreter-limitation svg { flex: 0 0 auto; margin-top: 1px; color: #72867c; }
 .handoff-panel.is-escalation { border-color: #f0c8bd; }
 .handoff-panel.is-escalation .approval-box { border-color: #f2d0c7; background: #fff6f3; }
 
@@ -534,6 +552,21 @@ button { font: inherit; }
   letter-spacing: .07em;
 }
 .intake-confirmation-copy p { margin: 6px 0 0; color: #46544e; font-size: 13px; line-height: 1.5; }
+.intake-visit-priorities { margin: 0; padding: 11px 12px; border: 0; border-top: 1px solid rgba(92, 121, 107, .12); }
+.intake-visit-priorities legend { padding: 0; color: #37463f; font-size: 11px; font-weight: 760; }
+.intake-visit-priorities > p { margin: 4px 0 9px; color: #75827c; font-size: 9px; line-height: 1.4; }
+.intake-priority-options { display: flex; flex-direction: column; gap: 6px; }
+.intake-priority-options label { min-width: 0; padding: 8px 9px; border: 1px solid #e0e7e3; border-radius: 9px; display: grid; grid-template-columns: 14px 22px minmax(0, 1fr) auto; align-items: center; gap: 7px; color: #66736d; background: rgba(255, 255, 255, .62); cursor: pointer; }
+.intake-priority-options label.is-selected { border-color: #a9cbbb; background: #edf7f1; box-shadow: inset 0 0 0 1px rgba(36, 107, 80, .08); }
+.intake-priority-options input { width: 13px; height: 13px; margin: 0; accent-color: var(--green); }
+.intake-priority-options label:has(input:disabled) { cursor: default; }
+.priority-rank { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; color: var(--green); background: var(--green-soft); font-size: 9px; font-weight: 760; }
+.priority-copy { min-width: 0; }
+.priority-copy strong, .priority-copy small { display: block; }
+.priority-copy strong { color: #43514a; font-size: 10px; line-height: 1.35; }
+.priority-copy small { margin-top: 2px; color: #89958f; font-size: 8px; line-height: 1.35; }
+.intake-priority-options em { min-width: 0; color: var(--green); font-size: 7px; font-style: normal; font-weight: 760; text-transform: uppercase; letter-spacing: .04em; }
+.intake-visit-priorities > small { display: block; margin-top: 8px; color: #89958f; font-size: 8px; line-height: 1.35; }
 .intake-ambiguities {
   padding: 10px 12px;
   border-top: 1px solid rgba(92, 121, 107, .12);

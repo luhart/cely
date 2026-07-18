@@ -4,11 +4,19 @@
 
 The hackathon wedge is intentionally narrow: a multilingual pre-visit intake for a new or long-absent outpatient. The reusable skill compiler is the technical reveal—not a generic dashboard or medical chatbot.
 
+## PRD scope
+
+The hackathon slice covers multilingual pre-visit intake that separates multiple concerns, lets the patient identify the highest-priority concern, and produces an evidence-linked clinical agenda. Sonnet provides the bounded bilingual interpretation and structured handoff, Athena Preview supplies cited chart context, and a clinician or nurse must approve any proposed write.
+
+Application state is session-only and held in memory; this scaffold does not add a persistent patient-data database. That is not a zero-retention claim: when live integrations are enabled, patient text and chart context are processed by Claude, and Athena Preview remains the source and optional write target. Resetting the app clears its local session state, not data governed by those upstream services.
+
+Voice intake and text-message delivery, scanned-chart or PDF migration, ICD mapping, and translated after-visit delivery are deliberately deferred. They are plausible follow-on workflows, not part of this demo's safety or completion claims.
+
 ## Three-minute demo
 
 1. Choose Tagalog for Maya Santos and use the editable demo response. Maya says her shoulder is `kumikirot`, reports morning dizziness, and says she stopped her blood-pressure medicine.
-2. Behemoth preserves her exact words, asks one bounded question to distinguish an intermittent ache from burning or stinging, and requires Maya to confirm the bilingual rendering.
-3. The confirmed intake runs `previsit-intake-v1` against Maya's real synthetic Athena Preview record and appointment. Athena adds hypertension and active lisinopril context; the clinician sees the resulting medication discrepancy.
+2. Behemoth preserves her exact words, asks one bounded question, extracts separate bilingual visit topics, and asks Maya which concern matters most before forwarding anything.
+3. The confirmed intake runs `previsit-intake-v1` against Maya's real synthetic Athena Preview record and appointment. The clinician sees Maya's preference separately from the clinical agenda, where Athena's hypertension and active-lisinopril context can elevate the medication discrepancy with cited evidence.
 4. Approve the handoff. Behemoth records a dry-run receipt for Preview appointment `2589077`; no Athena mutation occurs in the hackathon configuration.
 5. Compile the approved trace. The app emits `SKILL.md`, agent UI metadata, a permission policy, and a replayable golden trace.
 6. Switch to the red-flag replay—or type chest pressure with shortness of breath into the Spanish intake. The deterministic policy immediately displays bilingual emergency guidance, bypasses the model, and clinician acknowledgement performs no Athena write.
@@ -61,7 +69,7 @@ The client refuses live mode against any base URL other than Athena Preview. It 
 
 ## Claude
 
-Set `AGENT_MODE=live` and `ANTHROPIC_API_KEY` to enable both AI stages. `ANTHROPIC_INTERPRETATION_MODEL=claude-sonnet-5` handles free-form bilingual interpretation before patient confirmation; `ANTHROPIC_MODEL=claude-haiku-4-5` generates the downstream structured handoff. Both outputs are schema-constrained. The deterministic safety branch runs before either generation, emergencies bypass the models, and interpretation fails closed if Sonnet is unavailable.
+Set `AGENT_MODE=live` and `ANTHROPIC_API_KEY` to enable both AI stages. `claude-sonnet-5` handles free-form bilingual interpretation before patient confirmation and generates the downstream structured handoff. Both outputs are schema-constrained. The deterministic safety branch runs before either generation, emergencies bypass the models, and interpretation fails closed if Sonnet is unavailable.
 
 Each visit-agenda item carries a clinical rationale and one to three evidence citations. The clinician view renders those supporting patient statements or Athena facts directly beneath the agenda item so the recommendation is inspectable rather than merely asserted.
 

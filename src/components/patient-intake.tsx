@@ -49,6 +49,7 @@ type IntakeScript = {
   confirmationLead: string;
   demoPatientInterpretation: string;
   demoEnglishInterpretation: string;
+  demoVisitTopics: Array<{ nativeSummary: string; englishSummary: string }>;
   confirmLabel: string;
   controls: {
     changeLanguage: string;
@@ -60,6 +61,9 @@ type IntakeScript = {
     meaningHeading: string;
     meaningDetail: string;
     lowConfidence: string;
+    priorityHeading: string;
+    priorityHelp: string;
+    noPreference: string;
     confirmed: string;
   };
 };
@@ -69,8 +73,8 @@ const scripts: Record<PreferredLanguage, IntakeScript> = {
     code: "tl",
     nativeLabel: "Tagalog",
     englishLabel: "Tagalog",
-    complaintPrompt: "Bago ang iyong pagbisita, ano ang pinakamahalagang gusto mong talakayin sa iyong doktor?",
-    complaintPromptEnglish: "Before your visit, what is the most important thing you want to discuss with your doctor?",
+    complaintPrompt: "Bago ang iyong pagbisita, ano-ano ang gusto mong siguraduhing matalakay sa iyong doktor? Ilista ang lahat ng mahalaga sa iyo.",
+    complaintPromptEnglish: "Before your visit, tell us everything you want to make sure your doctor addresses.",
     complaintLabel: "Ilarawan sa sarili mong mga salita",
     complaintLabelEnglish: "Describe it in your own words",
     complaintPlaceholder: "Halimbawa: Kumikirot ang kanang balikat ko…",
@@ -90,6 +94,16 @@ const scripts: Record<PreferredLanguage, IntakeScript> = {
       "May paulit-ulit na kirot sa kanang balikat sa loob ng halos isang buwan, mas masakit kapag itinataas ang braso. Dahil sa pagkahilo tuwing umaga, itinigil ang gamot sa presyon mga dalawang linggo na ang nakalipas.",
     demoEnglishInterpretation:
       "Intermittent aching in the right shoulder for nearly one month, worse when raising the arm. Morning dizziness led the patient to stop the blood-pressure medication about two weeks ago.",
+    demoVisitTopics: [
+      {
+        nativeSummary: "Paulit-ulit na kirot sa kanang balikat, lalo na kapag itinataas ang braso",
+        englishSummary: "Intermittent right shoulder aching, worse when raising the arm",
+      },
+      {
+        nativeSummary: "Pagkahilo sa umaga at pagtigil sa gamot sa presyon",
+        englishSummary: "Morning dizziness and stopping the blood-pressure medication",
+      },
+    ],
     confirmLabel: "Oo, tama ito",
     controls: {
       changeLanguage: "Palitan ang wika",
@@ -101,15 +115,18 @@ const scripts: Record<PreferredLanguage, IntakeScript> = {
       meaningHeading: "Kailangang linawin ang kahulugan",
       meaningDetail: "Pinanatili ang di-tiyak na parirala sa halip na hulaan.",
       lowConfidence: "Mababang kumpiyansa",
-      confirmed: "Kinumpirma ng pasyente · handa para sa care team",
+      priorityHeading: "Ano ang pinakamahalagang matalakay muna?",
+      priorityHelp: "Piliin ang pangunahing pakay mo. Maaaring unahin ng care team ang ibang alalahanin para sa kaligtasan.",
+      noPreference: "Walang partikular na prayoridad",
+      confirmed: "Kinumpirma ng pasyente ang kahulugan at prayoridad · handa para sa care team",
     },
   },
   Spanish: {
     code: "es",
     nativeLabel: "Español",
     englishLabel: "Spanish",
-    complaintPrompt: "Antes de su visita, ¿qué es lo más importante que quiere hablar con su médico?",
-    complaintPromptEnglish: "Before your visit, what is the most important thing you want to discuss with your doctor?",
+    complaintPrompt: "Antes de su visita, cuéntenos todo lo que quiere asegurarse de hablar con su médico.",
+    complaintPromptEnglish: "Before your visit, tell us everything you want to make sure your doctor addresses.",
     complaintLabel: "Descríbalo con sus propias palabras",
     complaintLabelEnglish: "Describe it in your own words",
     complaintPlaceholder: "Por ejemplo: Me mareo por las mañanas…",
@@ -128,6 +145,12 @@ const scripts: Record<PreferredLanguage, IntakeScript> = {
       "Los mareos por la mañana comenzaron antes de dejar la medicina para la presión; dejó de tomarla porque ya se sentía mareada.",
     demoEnglishInterpretation:
       "Morning dizziness began before the patient stopped the blood-pressure medication; the medication was stopped because of the dizziness.",
+    demoVisitTopics: [
+      {
+        nativeSummary: "Mareos por la mañana y suspensión de la medicina para la presión",
+        englishSummary: "Morning dizziness and stopping the blood-pressure medication",
+      },
+    ],
     confirmLabel: "Sí, es correcto",
     controls: {
       changeLanguage: "Cambiar idioma",
@@ -139,7 +162,10 @@ const scripts: Record<PreferredLanguage, IntakeScript> = {
       meaningHeading: "Hay que aclarar el significado",
       meaningDetail: "Conservamos una frase matizada en lugar de adivinar.",
       lowConfidence: "Baja confianza",
-      confirmed: "Confirmado por el paciente · listo para el equipo de atención",
+      priorityHeading: "¿Qué es lo más importante para hablar primero?",
+      priorityHelp: "Elija su prioridad principal. El equipo puede adelantar otro tema por seguridad.",
+      noPreference: "Sin preferencia específica",
+      confirmed: "Significado y prioridad confirmados · listo para el equipo de atención",
     },
   },
 };
@@ -220,6 +246,7 @@ export function PatientIntake({
 }) {
   const complaintId = useId();
   const clarificationId = useId();
+  const priorityGroupName = useId();
   const confirmedRef = useRef(false);
   const interpretationRequestRef = useRef(0);
   const interpretationAbortRef = useRef<AbortController | null>(null);
@@ -231,6 +258,7 @@ export function PatientIntake({
   const [generatedInterpretation, setGeneratedInterpretation] = useState<GeneratedInterpretation | null>(null);
   const [interpretationStatus, setInterpretationStatus] = useState<InterpretationStatus>("idle");
   const [interpretationError, setInterpretationError] = useState<string | null>(null);
+  const [topConcernChoice, setTopConcernChoice] = useState<number | "none" | null>(null);
 
   const script = preferredLanguage ? scripts[preferredLanguage] : null;
   const stageIndex = stage === "confirmed" ? stageLabels.length : stage === "urgent" ? 1 : stageLabels.indexOf(
@@ -277,6 +305,7 @@ export function PatientIntake({
         english: script.demoEnglishInterpretation,
         confidence: "high" as const,
         ambiguities: [] as string[],
+        visitTopics: script.demoVisitTopics,
         method: "deterministic" as const,
         model: "Golden-path fixture",
       };
@@ -287,6 +316,7 @@ export function PatientIntake({
       english: generatedInterpretation.englishInterpretation,
       confidence: generatedInterpretation.confidence,
       ambiguities: generatedInterpretation.ambiguities,
+      visitTopics: generatedInterpretation.visitTopics,
       method: "sonnet" as const,
       model: generatedInterpretation.model,
     };
@@ -299,6 +329,7 @@ export function PatientIntake({
     setGeneratedInterpretation(null);
     setInterpretationStatus("idle");
     setInterpretationError(null);
+    setTopConcernChoice(null);
   };
 
   const chooseLanguage = (language: PreferredLanguage) => {
@@ -420,7 +451,7 @@ export function PatientIntake({
   };
 
   const confirmInterpretation = () => {
-    if (disabled || confirmedRef.current || !preferredLanguage || !script || !interpretation || !clarification) return;
+    if (disabled || confirmedRef.current || !preferredLanguage || !script || !interpretation || !clarification || topConcernChoice === null) return;
     confirmedRef.current = true;
     setStage("confirmed");
     onConfirmed({
@@ -432,6 +463,14 @@ export function PatientIntake({
       englishInterpretation: interpretation.english,
       interpretationMethod: interpretation.method,
       ambiguities: interpretation.ambiguities,
+      confirmedConcerns: interpretation.visitTopics.map((topic, index) => ({
+        id: `patient-concern-${index + 1}`,
+        nativeSummary: topic.nativeSummary,
+        englishSummary: topic.englishSummary,
+        mentionOrder: index + 1,
+      })),
+      topConcernId: typeof topConcernChoice === "number" ? `patient-concern-${topConcernChoice + 1}` : null,
+      priorityConfirmed: true,
       interpretationConfirmed: true,
       confidence: interpretation.confidence,
     });
@@ -672,6 +711,44 @@ export function PatientIntake({
                         <p lang="en">{interpretation.english}</p>
                       </div>
                     </div>
+                    <fieldset className="intake-visit-priorities">
+                      <legend lang={script.code}>{script.controls.priorityHeading}</legend>
+                      <p lang={script.code}>{script.controls.priorityHelp}</p>
+                      <div className="intake-priority-options">
+                        {interpretation.visitTopics.map((topic, index) => {
+                          const selected = topConcernChoice === index;
+                          return (
+                            <label className={selected ? "is-selected" : ""} key={`${topic.nativeSummary}-${index}`}>
+                              <input
+                                type="radio"
+                                name={priorityGroupName}
+                                checked={selected}
+                                onChange={() => setTopConcernChoice(index)}
+                                disabled={disabled || stage === "confirmed"}
+                              />
+                              <span className="priority-rank">{index + 1}</span>
+                              <span className="priority-copy">
+                                <strong lang={script.code}>{topic.nativeSummary}</strong>
+                                <small lang="en">{topic.englishSummary}</small>
+                              </span>
+                              <em>{selected ? (preferredLanguage === "Tagalog" ? "Pangunahin" : "Prioridad") : ""}</em>
+                            </label>
+                          );
+                        })}
+                        <label className={topConcernChoice === "none" ? "is-selected" : ""}>
+                          <input
+                            type="radio"
+                            name={priorityGroupName}
+                            checked={topConcernChoice === "none"}
+                            onChange={() => setTopConcernChoice("none")}
+                            disabled={disabled || stage === "confirmed"}
+                          />
+                          <span className="priority-rank">—</span>
+                          <span className="priority-copy"><strong lang={script.code}>{script.controls.noPreference}</strong></span>
+                        </label>
+                      </div>
+                      <small lang="en">Patient preference only; deterministic safety and clinical review may change visit order.</small>
+                    </fieldset>
                     {interpretation.ambiguities.length > 0 ? (
                       <div className="intake-ambiguities" lang="en">
                         <strong>Meaning to verify with the patient</strong>
@@ -686,7 +763,7 @@ export function PatientIntake({
                         }} disabled={disabled}>
                           <PencilLine size={13} aria-hidden="true" /> {script.controls.editAnswers}
                         </button>
-                        <button className="button intake-confirm" type="button" onClick={confirmInterpretation} disabled={disabled}>
+                        <button className="button intake-confirm" type="button" onClick={confirmInterpretation} disabled={disabled || topConcernChoice === null}>
                           <Check size={14} aria-hidden="true" /> {script.confirmLabel}
                         </button>
                       </div>

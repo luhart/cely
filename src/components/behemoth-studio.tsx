@@ -28,6 +28,7 @@ import { PatientIntake, type ConfirmedIntake, type UrgentIntake } from "@/compon
 import { getScenario, type DemoScenario } from "@/lib/demo/fixtures";
 import type { CompiledSkill } from "@/lib/skills/compiler";
 import type { RunResult } from "@/lib/workflow/contracts";
+import { deriveTraceMetrics } from "@/lib/workflow/metrics";
 
 type Phase = "idle" | "running" | "review" | "approved" | "compiled";
 type AthenaStatus = {
@@ -53,10 +54,20 @@ const workflowSteps = [
 const delay = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
 function createNote(result: RunResult): string {
+  const patientPriorities = [...result.concerns].sort((left, right) => {
+    if (left.patientPriority === "top" && right.patientPriority !== "top") return -1;
+    if (right.patientPriority === "top" && left.patientPriority !== "top") return 1;
+    return (left.mentionOrder ?? 99) - (right.mentionOrder ?? 99);
+  });
   return [
     "BEHEMOTH PRE-VISIT INTAKE — CLINICIAN APPROVED",
     "",
     result.handoff.summary,
+    "",
+    "PATIENT-CONFIRMED PRIORITIES",
+    ...patientPriorities.map(
+      (concern, index) => `${index + 1}. ${concern.translated ?? concern.patientWords}${concern.patientPriority === "top" ? " [patient's top priority]" : ""}\n   Original: ${concern.patientWords}`,
+    ),
     "",
     "VISIT AGENDA",
     ...result.handoff.agenda.map(
@@ -91,6 +102,15 @@ export function BehemothStudio() {
   const [error, setError] = useState<string | null>(null);
   const [intakeKey, setIntakeKey] = useState(0);
   const scenario = useMemo(() => getScenario(scenarioId), [scenarioId]);
+  const traceMetrics = useMemo(() => run ? deriveTraceMetrics(run) : null, [run]);
+  const orderedPatientConcerns = useMemo(() => {
+    if (!run) return [];
+    return [...run.concerns].sort((left, right) => {
+      if (left.patientPriority === "top" && right.patientPriority !== "top") return -1;
+      if (right.patientPriority === "top" && left.patientPriority !== "top") return 1;
+      return (left.mentionOrder ?? 99) - (right.mentionOrder ?? 99);
+    });
+  }, [run]);
 
   useEffect(() => {
     fetch("/api/athena/status", { cache: "no-store" })
@@ -382,6 +402,7 @@ export function BehemothStudio() {
           <div className="channel-footer">
             <span><BadgeCheck size={14} /> Original language preserved</span>
             <span><ShieldCheck size={14} /> Bounded red-flag screen</span>
+            <span title="Reset clears Behemoth's local in-memory intake; when live integrations are enabled, submitted data is processed by Claude and Athena Preview."><LockKeyhole size={14} /> Session-only app state · live services process submissions</span>
           </div>
         </article>
 
@@ -423,13 +444,45 @@ export function BehemothStudio() {
                   <Cloud size={12} /> Athena · {run.execution.athena === "partial" ? "live / partial" : run.execution.athena}
                 </span>
                 <span className={run.execution.model === "live" ? "live" : "fallback"}>
-                  <Sparkles size={12} /> {isEscalation ? "Model · bypassed" : `Claude · ${run.execution.model}`}
+                  <Sparkles size={12} /> {isEscalation ? "Model · bypassed" : `Sonnet 5 · ${run.execution.model}`}
                 </span>
                 <span className="live"><ShieldCheck size={12} /> Safety · deterministic</span>
               </div>
 
+              {traceMetrics ? (
+                <div className="trace-metrics" aria-label="Measured workflow trace">
+                  <span><strong>{traceMetrics.concernCount}</strong> patient topic{traceMetrics.concernCount === 1 ? "" : "s"}</span>
+                  {traceMetrics.handoffDurationMs !== null ? <span><strong>{(traceMetrics.handoffDurationMs / 1000).toFixed(1)}s</strong> to handoff</span> : null}
+                  <span><strong>{traceMetrics.athenaEvidenceCount}</strong> Athena fact{traceMetrics.athenaEvidenceCount === 1 ? "" : "s"}</span>
+                  <span><strong>{traceMetrics.agendaEvidenceCoverage.percent}%</strong> citations resolved</span>
+                  <span><strong>{traceMetrics.autonomousWrites}</strong> autonomous writes</span>
+                </div>
+              ) : null}
+
+              {orderedPatientConcerns.length > 0 ? (
+                <div className="patient-priorities-card">
+                  <div className="patient-priorities-heading">
+                    <div><Languages size={14} /><strong>Patient-confirmed priorities</strong></div>
+                    <span>Preference, not clinical urgency</span>
+                  </div>
+                  <ol>
+                    {orderedPatientConcerns.map((concern, index) => (
+                      <li key={concern.id}>
+                        <span>{index + 1}</span>
+                        <div>
+                          <strong>{concern.translated ?? concern.patientWords}</strong>
+                          <small>{concern.patientWords}</small>
+                        </div>
+                        {concern.patientPriority === "top" ? <em>Top priority</em> : null}
+                      </li>
+                    ))}
+                  </ol>
+                  {!orderedPatientConcerns.some((concern) => concern.patientPriority === "top") ? <p>No single top priority selected; mention order is preserved.</p> : null}
+                </div>
+              ) : null}
+
               <div className="handoff-section">
-                <h4>Visit agenda</h4>
+                <h4>Clinical visit agenda</h4>
                 <ol>
                   {currentHandoff.agenda.map((item, index) => (
                     <li key={`${item.label}-${index}`}>
@@ -486,6 +539,7 @@ export function BehemothStudio() {
                   </button>
                 )}
               </div>
+              <div className="interpreter-limitation"><Languages size={13} /> This pre-visit communication aid does not replace a qualified interpreter during the clinical encounter.</div>
             </div>
           )}
         </article>

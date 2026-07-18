@@ -15,21 +15,77 @@ export const ConcernSchema = z.object({
   translated: z.string().optional(),
   duration: z.string().nullable(),
   severity: z.number().int().min(0).max(10).nullable(),
+  mentionOrder: z.number().int().min(1).max(8).optional(),
+  patientPriority: z.enum(["top", "mentioned"]).optional(),
   priority: z.enum(["routine", "soon", "urgent"]),
 });
 
-export const ConfirmedIntakeSchema = z.object({
-  preferredLanguage: z.enum(["Tagalog", "Spanish"]),
-  chiefComplaint: z.string().trim().min(3).max(1000),
-  clarificationQuestion: z.string().trim().min(3).max(500),
-  clarificationResponse: z.string().trim().min(1).max(500),
-  nativeInterpretation: z.string().trim().min(3).max(1500).optional(),
-  englishInterpretation: z.string().trim().min(3).max(1500),
-  interpretationMethod: z.enum(["deterministic", "sonnet"]).optional(),
-  ambiguities: z.array(z.string().trim().min(1).max(300)).max(4).optional(),
-  interpretationConfirmed: z.literal(true),
-  confidence: z.enum(["low", "medium", "high"]),
+export const VisitTopicSchema = z.object({
+  nativeSummary: z.string().trim().min(1).max(300),
+  englishSummary: z.string().trim().min(1).max(300),
 });
+
+export const ConfirmedConcernSchema = VisitTopicSchema.extend({
+  id: z.string().trim().min(1).max(80),
+  mentionOrder: z.number().int().min(1).max(8),
+});
+
+export const ConfirmedIntakeSchema = z
+  .object({
+    preferredLanguage: z.enum(["Tagalog", "Spanish"]),
+    chiefComplaint: z.string().trim().min(3).max(1000),
+    clarificationQuestion: z.string().trim().min(3).max(500),
+    clarificationResponse: z.string().trim().min(1).max(500),
+    nativeInterpretation: z.string().trim().min(3).max(1500).optional(),
+    englishInterpretation: z.string().trim().min(3).max(1500),
+    interpretationMethod: z.enum(["deterministic", "sonnet"]).optional(),
+    ambiguities: z.array(z.string().trim().min(1).max(300)).max(4).optional(),
+    interpretationConfirmed: z.literal(true),
+    confidence: z.enum(["low", "medium", "high"]),
+    confirmedConcerns: z.array(ConfirmedConcernSchema).min(1).max(8).optional(),
+    topConcernId: z.string().trim().min(1).max(80).nullable().optional(),
+    priorityConfirmed: z.literal(true).optional(),
+  })
+  .superRefine((intake, context) => {
+    const concerns = intake.confirmedConcerns;
+    if (!concerns) {
+      if (typeof intake.topConcernId === "string") {
+        context.addIssue({
+          code: "custom",
+          path: ["topConcernId"],
+          message: "Top concern must reference a supplied confirmed concern.",
+        });
+      }
+      return;
+    }
+
+    const ids = concerns.map((concern) => concern.id);
+    if (new Set(ids).size !== ids.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["confirmedConcerns"],
+        message: "Confirmed concern IDs must be unique.",
+      });
+    }
+
+    const mentionOrders = concerns.map((concern) => concern.mentionOrder).sort((left, right) => left - right);
+    const hasContiguousMentionOrder = mentionOrders.every((order, index) => order === index + 1);
+    if (!hasContiguousMentionOrder) {
+      context.addIssue({
+        code: "custom",
+        path: ["confirmedConcerns"],
+        message: "Confirmed concern mention order must be unique and contiguous from 1.",
+      });
+    }
+
+    if (typeof intake.topConcernId === "string" && !ids.includes(intake.topConcernId)) {
+      context.addIssue({
+        code: "custom",
+        path: ["topConcernId"],
+        message: "Top concern must reference a supplied confirmed concern.",
+      });
+    }
+  });
 
 export const IntakeInterpretationRequestSchema = z.object({
   preferredLanguage: z.enum(["Tagalog", "Spanish"]),
@@ -41,6 +97,7 @@ export const IntakeInterpretationRequestSchema = z.object({
 export const IntakeInterpretationSchema = z.object({
   patientInterpretation: z.string().trim().min(3).max(1500),
   englishInterpretation: z.string().trim().min(3).max(1500),
+  visitTopics: z.array(VisitTopicSchema).min(1).max(8),
   confidence: z.enum(["low", "medium"]),
   ambiguities: z.array(z.string().trim().min(1).max(300)).max(4),
 });
@@ -158,6 +215,8 @@ export const RunResultSchema = z.object({
 
 export type Evidence = z.infer<typeof EvidenceSchema>;
 export type Concern = z.infer<typeof ConcernSchema>;
+export type VisitTopic = z.infer<typeof VisitTopicSchema>;
+export type ConfirmedConcern = z.infer<typeof ConfirmedConcernSchema>;
 export type ConfirmedIntake = z.infer<typeof ConfirmedIntakeSchema>;
 export type IntakeInterpretationRequest = z.infer<typeof IntakeInterpretationRequestSchema>;
 export type IntakeInterpretation = z.infer<typeof IntakeInterpretationSchema>;

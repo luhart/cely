@@ -31,9 +31,15 @@ export async function generateClinicalHandoff(input: {
 
   try {
     const { output } = await generateText({
-      model: anthropic(process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5"),
+      model: anthropic(process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5"),
       abortSignal: AbortSignal.timeout(20_000),
       maxOutputTokens: 1_600,
+      providerOptions: {
+        anthropic: {
+          thinking: { type: "disabled" },
+          structuredOutputMode: "outputFormat",
+        },
+      },
       output: Output.object({
         schema: HandoffSchema,
         name: "ClinicalHandoff",
@@ -42,6 +48,8 @@ export async function generateClinicalHandoff(input: {
       system: `You prepare a pre-visit handoff, not a diagnosis or treatment plan.
 Preserve the patient's own words. Never infer facts that are not in evidence.
 Call out contradictions instead of resolving them. Keep the agenda to what fits in one visit.
+The supplied concerns may include patientPriority="top". Treat that as the patient's preference, not clinical urgency, and never let it override the deterministic safety disposition.
+When five or fewer confirmed concerns are supplied, keep each one visible in the agenda; you may reorder them for safety or chart reconciliation when the rationale and evidence support doing so.
 For every agenda item, provide a concise label, a short clinical rationale, and one to three supporting evidence IDs.
 Every agenda evidence ID must be supplied evidence and must also appear in the handoff-level evidence IDs.
 Use emergency-guidance only when the supplied safety branch already escalated.

@@ -41,5 +41,18 @@ export function interpretationValidationError(
   if (markerMatches.length >= 4) {
     return "English interpretation still appears to be in the source language.";
   }
+  for (const topic of interpretation.visitTopics) {
+    const topicNative = normalize(topic.nativeSummary);
+    const topicEnglish = normalize(topic.englishSummary);
+    if (!topicEnglish || topicEnglish === topicNative) {
+      return "A visit topic is empty or duplicates its native-language rendering under the English label.";
+    }
+    const topicEnglishTokens = new Set(topicEnglish.split(" "));
+    const topicMarkerMatches = SOURCE_LANGUAGE_MARKERS[request.preferredLanguage]
+      .filter((marker) => topicEnglishTokens.has(marker));
+    if (topicMarkerMatches.length >= 3) {
+      return "A visit topic still appears to be in the source language.";
+    }
+  }
   return null;
 }

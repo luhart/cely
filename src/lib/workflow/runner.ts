@@ -166,13 +166,13 @@ function athenaEvidence(context: AthenaChartContext, preferredAppointmentId?: st
 function interactiveConversation(patient: DemoScenario["patient"], intake: ConfirmedIntake): ConversationMessage[] {
   const firstName = patient.displayName.split(" ")[0];
   const opening = intake.preferredLanguage === "Tagalog"
-    ? `Kumusta ${firstName}. Ano ang pinakamahalagang gusto mong talakayin sa iyong pagbisita?`
-    : `Hola ${firstName}. ¿Qué es lo más importante que quiere hablar durante su visita?`;
+    ? `Kumusta ${firstName}. Ano-ano ang gusto mong siguraduhing matalakay sa iyong pagbisita?`
+    : `Hola ${firstName}. ¿Qué temas quiere asegurarse de hablar durante su visita?`;
   const confirmation = intake.preferredLanguage === "Tagalog"
     ? "Ito ba ang tamang pagkaunawa?"
     : "¿Entendimos correctamente?";
   return [
-    { speaker: "behemoth", text: opening, translated: "What is the most important thing you want to discuss at your visit?" },
+    { speaker: "behemoth", text: opening, translated: "What topics do you want to make sure are addressed at your visit?" },
     { speaker: "patient", text: intake.chiefComplaint, translated: intake.englishInterpretation },
     { speaker: "behemoth", text: intake.clarificationQuestion, translated: "One bounded clarification was requested before interpretation." },
     { speaker: "patient", text: intake.clarificationResponse },
@@ -230,6 +230,18 @@ function interactiveEvidence(intake: ConfirmedIntake): Evidence[] {
       resource: `${interpretationMethod} / unresolved ambiguity`,
       observedAt: "Pre-visit intake",
     }] : []),
+    ...(intake.confirmedConcerns ?? []).map((concern) => ({
+      id: `patient-priority-${concern.mentionOrder}`,
+      label: concern.id === intake.topConcernId
+        ? "Patient-selected top visit priority"
+        : `Patient-confirmed visit topic ${concern.mentionOrder}`,
+      value: `${concern.englishSummary} · Original: ${concern.nativeSummary}`,
+      source: "derived" as const,
+      resource: concern.id === intake.topConcernId
+        ? "Patient priority selection / confirmed"
+        : "Patient-confirmed topic / mention order preserved",
+      observedAt: "Confirmed by patient",
+    })),
   ];
 }
 
@@ -276,15 +288,27 @@ function urgentConversation(
   ];
 }
 
-function interactiveConcern(intake: ConfirmedIntake, escalated: boolean): Concern {
-  return {
+function interactiveConcerns(intake: ConfirmedIntake, escalated: boolean): Concern[] {
+  if (intake.confirmedConcerns?.length) {
+    return intake.confirmedConcerns.map((concern) => ({
+      id: concern.id,
+      patientWords: concern.nativeSummary,
+      translated: concern.englishSummary,
+      duration: null,
+      severity: null,
+      mentionOrder: concern.mentionOrder,
+      patientPriority: concern.id === intake.topConcernId ? "top" : "mentioned",
+      priority: escalated ? "urgent" : "soon",
+    }));
+  }
+  return [{
     id: "concern-patient-entered",
     patientWords: intake.chiefComplaint,
     translated: intake.englishInterpretation,
     duration: null,
     severity: null,
     priority: escalated ? "urgent" : "soon",
-  };
+  }];
 }
 
 function urgentConcern(intake: UrgentIntake): Concern {
@@ -363,7 +387,7 @@ function buildEvidenceLinkedFallback(input: {
   const lowConfidence = input.intake?.confidence === "low";
   const sonnetInterpretation = input.intake?.interpretationMethod === "sonnet";
   const patientEvidenceIds = input.evidence
-    .filter((item) => item.source === "patient" || [
+    .filter((item) => item.source === "patient" || item.id.startsWith("patient-priority-") || [
       "patient-confirmed-interpretation",
       "derived-native-interpretation",
       "derived-interpretation-ambiguities",
@@ -507,7 +531,7 @@ export async function runPrevisitWorkflow(input: RunInput): Promise<RunResult> {
   const concerns = input.urgentIntake
     ? [urgentConcern(input.urgentIntake)]
     : input.intake
-      ? [interactiveConcern(input.intake, escalated)]
+      ? interactiveConcerns(input.intake, escalated)
       : scenario.concerns;
   const conversation = input.urgentIntake
     ? urgentConversation(patient, input.urgentIntake, safety.guidance)
