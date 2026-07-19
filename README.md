@@ -1,6 +1,8 @@
 # Cely
 
-**Governed clinical workflow intelligence.** Cely turns multilingual patient concerns into a clinician-ready, evidence-linked visit agenda grounded in Athena Preview. It keeps the patient's words, chart evidence, uncertainty, and clinician approval connected from intake through handoff.
+Cely is an ESL Patient intake tool that enables patients to communicate their most important concerns to providers, and helps save time for providers by synthesizing the highest priority concerns for their upcoming appointment. Made as an entry to Cerebral Valley Hackathon 7/18/2026.
+
+It turns multilingual patient concerns into a clinician-ready, evidence-linked visit agenda grounded in Athena Preview, keeping the patient's words, chart evidence, uncertainty, and clinician approval connected from intake through handoff.
 
 Cely is not a diagnostic chatbot. It preserves the patient's words, makes uncertainty visible, keeps patient-reported and chart-derived facts distinct, and requires human approval before any Athena write.
 
